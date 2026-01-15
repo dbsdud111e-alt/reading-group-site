@@ -75,6 +75,7 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
     const [books, setBooks] = useState<Partial<Book>[]>([]);
     const [schedules, setSchedules] = useState<Schedule[]>([]);
     const [journalPosts, setJournalPosts] = useState<JournalPost[]>([]);
+    const [users, setUsers] = useState<User[]>([]);
     const [materialTags, setMaterialTags] = useState<string[]>(['공통수학', '미적분', '기하', '활동지', '발표자료', '도구']);
     const [globalFilterTags, setGlobalFilterTags] = useState<string[]>([]);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
