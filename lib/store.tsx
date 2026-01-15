@@ -110,8 +110,6 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
             }
         } catch (err) {
             console.error('Initial fetch failed:', err);
-        } finally {
-            setIsLoading(false);
         }
     };
 
@@ -139,7 +137,10 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
                     role: 'teacher'
                 };
 
-                await supabase.from('users').insert([initialProfile]);
+                // Don't wait for insert, do it in background
+                supabase.from('users').insert([initialProfile]).then(() => {
+                    loadInitialData(); // Refresh users list after insert
+                });
 
                 setCurrentUser({
                     id: supabaseUser.id,
@@ -147,8 +148,6 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
                     avatar_url: initialProfile.avatar_url,
                     email: supabaseUser.email
                 });
-
-                loadInitialData(); // Refresh users list
             }
         } catch (err) {
             console.error('Error fetching profile:', err);
@@ -158,12 +157,13 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
     };
 
     useEffect(() => {
+        // Load data in background, don't block UI
         loadInitialData();
 
-        // Set a safety timeout to ensure loading doesn't hang
+        // Set a safety timeout to ensure loading doesn't hang (reduced to 2 seconds)
         const loadingTimeout = setTimeout(() => {
             setIsLoading(false);
-        }, 5000); // 5 second timeout
+        }, 2000);
 
         // Check active session
         supabase.auth.getSession().then(({ data: { session } }) => {
