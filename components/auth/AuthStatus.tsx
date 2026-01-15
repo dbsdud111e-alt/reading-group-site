@@ -6,10 +6,33 @@ import { LogIn, User as UserIcon, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function AuthStatus() {
-    const { currentUser, isLoading, signInWithGoogle, signOut, updateProfile } = useReading();
+    const { currentUser, isLoading, signInWithGoogle, signInWithEmail, signUpWithEmail, signOut, updateProfile } = useReading();
     const [nickname, setNickname] = useState('');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [isUpdating, setIsUpdating] = useState(false);
     const [showProfileSetup, setShowProfileSetup] = useState(false);
+    const [authMode, setAuthMode] = useState<'login' | 'signup' | 'idle'>('idle');
+
+    const handleEmailAuth = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsUpdating(true);
+        try {
+            if (authMode === 'login') {
+                const { error } = await signInWithEmail(email, password);
+                if (error) throw error;
+            } else {
+                const { error } = await signUpWithEmail(email, password);
+                if (error) throw error;
+                alert('회원가입 확인 메일이 발송되었습니다 (또는 즉시 로그인 가능).');
+            }
+            setAuthMode('idle');
+        } catch (err: any) {
+            alert(err.message || '인증 중 오류가 발생했습니다.');
+        } finally {
+            setIsUpdating(false);
+        }
+    };
 
     const handleUpdateNickname = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -40,14 +63,76 @@ export function AuthStatus() {
     }
 
     if (!currentUser) {
+        if (authMode !== 'idle') {
+            return (
+                <div className="p-4 bg-white border border-[#EBEBEB] rounded-xl shadow-sm">
+                    <h3 className="text-sm font-bold text-[#37352F] mb-4">
+                        {authMode === 'login' ? '이메일 로그인' : '이메일 회원가입'}
+                    </h3>
+                    <form onSubmit={handleEmailAuth} className="space-y-3">
+                        <div>
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="이메일"
+                                className="w-full px-3 py-2 text-sm border border-[#EBEBEB] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/10"
+                                required
+                            />
+                        </div>
+                        <div>
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="비밀번호"
+                                className="w-full px-3 py-2 text-sm border border-[#EBEBEB] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/10"
+                                required
+                            />
+                        </div>
+                        <button
+                            type="submit"
+                            disabled={isUpdating}
+                            className="w-full py-2 bg-[#37352F] text-white text-xs font-bold rounded-lg hover:bg-black transition-all"
+                        >
+                            {isUpdating ? '처리 중...' : (authMode === 'login' ? '로그인' : '가입하기')}
+                        </button>
+                    </form>
+                    <div className="mt-4 pt-4 border-t border-[#F1F1F0] flex flex-col gap-2">
+                        <button
+                            onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
+                            className="text-[11px] text-[#787774] hover:text-[#37352F] hover:underline"
+                        >
+                            {authMode === 'login' ? '계정이 없으신가요? 회원가입' : '이미 계정이 있나요? 로그인'}
+                        </button>
+                        <button
+                            onClick={() => setAuthMode('idle')}
+                            className="text-[11px] text-[#787774] hover:text-[#37352F]"
+                        >
+                            뒤로가기
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
         return (
-            <button
-                onClick={signInWithGoogle}
-                className="flex items-center gap-2 w-full px-3 py-2 text-[#787774] hover:bg-[#F1F1F0] rounded-lg transition-colors text-sm font-medium"
-            >
-                <LogIn size={18} />
-                <span>Google로 로그인</span>
-            </button>
+            <div className="space-y-2">
+                <button
+                    onClick={signInWithGoogle}
+                    className="flex items-center gap-2 w-full px-3 py-2.5 text-[#37352F] border border-[#EBEBEB] hover:bg-[#F1F1F0] rounded-lg transition-colors text-sm font-medium bg-white"
+                >
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-4 h-4" alt="" />
+                    <span>Google로 계속하기</span>
+                </button>
+                <button
+                    onClick={() => setAuthMode('login')}
+                    className="flex items-center gap-2 w-full px-3 py-2.5 text-[#787774] hover:bg-[#F1F1F0] rounded-lg transition-colors text-sm font-medium"
+                >
+                    <LogIn size={18} />
+                    <span>이메일로 로그인/가입</span>
+                </button>
+            </div>
         );
     }
 

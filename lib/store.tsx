@@ -63,6 +63,8 @@ interface ReadingContextType {
     currentUser: User | null;
     isLoading: boolean;
     signInWithGoogle: () => Promise<void>;
+    signInWithEmail: (email: string, password: string) => Promise<{ error: any }>;
+    signUpWithEmail: (email: string, password: string) => Promise<{ error: any }>;
     signOut: () => Promise<void>;
     updateProfile: (updates: { name: string }) => Promise<void>;
 }
@@ -332,6 +334,22 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
         if (error) console.error('Error signing in:', error.message);
     };
 
+    const signInWithEmail = async (email: string, password: string) => {
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+        });
+        return { error };
+    };
+
+    const signUpWithEmail = async (email: string, password: string) => {
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+        });
+        return { error };
+    };
+
     const signOut = async () => {
         await supabase.auth.signOut();
     };
@@ -382,6 +400,8 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
             currentUser,
             isLoading,
             signInWithGoogle,
+            signInWithEmail,
+            signUpWithEmail,
             signOut,
             updateProfile
         }}>
