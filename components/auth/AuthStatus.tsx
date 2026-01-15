@@ -18,8 +18,11 @@ export function AuthStatus() {
     const handleIdAuth = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        const cleanUserId = userId.trim();
+        const cleanNickname = nickname.trim();
+
         if (authMode === 'signup') {
-            if (!nickname.trim()) {
+            if (!cleanNickname) {
                 alert('닉네임을 입력해 주세요.');
                 return;
             }
@@ -36,14 +39,15 @@ export function AuthStatus() {
         setIsUpdating(true);
         try {
             if (authMode === 'login') {
-                const { error } = await signInWithId(userId, memberNumber);
+                const { error } = await signInWithId(cleanUserId, memberNumber);
                 if (error) throw error;
             } else {
-                const { error } = await signUpWithId(userId, memberNumber, nickname);
+                const { error } = await signUpWithId(cleanUserId, memberNumber, cleanNickname);
                 if (error) throw error;
                 alert('회원가입이 완료되었습니다! 이제 로그인해 주세요.');
                 setAuthMode('login');
                 setMemberNumber('');
+                setConfirmMemberNumber('');
             }
             if (authMode === 'login') {
                 setAuthMode('idle');

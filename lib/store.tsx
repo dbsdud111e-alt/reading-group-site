@@ -337,7 +337,8 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
 
     // Simple ID-based login (internally uses email format for Supabase Auth)
     const signInWithId = async (userId: string, memberNumber: string) => {
-        const internalEmail = `${userId}@math-reading.group`;
+        const cleanId = userId.trim().toLowerCase();
+        const internalEmail = `${cleanId}@math-reading.com`;
         const { data, error } = await supabase.auth.signInWithPassword({
             email: internalEmail,
             password: memberNumber,
@@ -346,7 +347,9 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
     };
 
     const signUpWithId = async (userId: string, memberNumber: string, nickname: string) => {
-        const internalEmail = `${userId}@math-reading.group`;
+        const cleanId = userId.trim().toLowerCase();
+        const cleanNickname = nickname.trim();
+        const internalEmail = `${cleanId}@math-reading.com`;
 
         // 1. Sign up to Auth
         const { data, error: authError } = await supabase.auth.signUp({
@@ -354,7 +357,7 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
             password: memberNumber,
             options: {
                 data: {
-                    full_name: nickname
+                    full_name: cleanNickname
                 }
             }
         });
@@ -365,7 +368,7 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
         if (data.user) {
             const { error: profileError } = await supabase.from('users').upsert({
                 id: data.user.id,
-                display_name: nickname,
+                display_name: cleanNickname,
                 updated_at: new Date().toISOString()
             });
             if (profileError) console.error('Profile creation error:', profileError.message);
