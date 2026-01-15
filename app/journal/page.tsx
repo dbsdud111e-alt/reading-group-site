@@ -415,7 +415,7 @@ function JournalPageContent() {
                                                         ))}
                                                     </div>
                                                 </div>
-                                                {activeUser !== 'all' && (
+                                                {currentUser?.id === post.user_id && (
                                                     <div className="flex flex-col items-end gap-2">
                                                         <div className="flex items-center gap-2">
                                                             <button
@@ -436,7 +436,7 @@ function JournalPageContent() {
                                                         </div>
                                                     </div>
                                                 )}
-                                                {activeUser === 'all' && (
+                                                {currentUser?.id !== post.user_id && (
                                                     <div className="flex flex-col items-end">
                                                         <div className="text-xs font-bold text-[#37352F] mb-1">
                                                             {getUserName(post.user_id)}

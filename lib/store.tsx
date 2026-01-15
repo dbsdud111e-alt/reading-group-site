@@ -222,10 +222,10 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    const addSchedule = async (schedule: Schedule) => {
-        const { error } = await supabase.from('schedules').insert([schedule]);
-        if (!error) {
-            setSchedules(prev => [...prev, schedule]);
+    const addSchedule = async (schedule: Omit<Schedule, 'id'>) => {
+        const { data, error } = await supabase.from('schedules').insert([schedule]).select().single();
+        if (!error && data) {
+            setSchedules(prev => [...prev, data]);
         }
     };
 
