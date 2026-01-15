@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, Suspense } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, List, Type, HelpCircle, Heart, Lightbulb, Plus, Edit2, Trash2, Upload, Link as LinkIcon, Check, X, FileText, User, MessageSquare, BookOpen } from 'lucide-react';
+import { ChevronLeft, List, Type, HelpCircle, Heart, Lightbulb, Plus, Edit2, Trash2, Upload, Link as LinkIcon, Check, X, FileText, User, MessageSquare, BookOpen, Image as ImageIcon } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useReading, JournalPost } from '@/lib/store';
@@ -410,10 +410,10 @@ function JournalPageContent() {
                                 <h2 className="text-xl font-bold text-[#37352F]">
                                     {activeUser === 'all' ? `전체 ${categoryLabel}` : `${categoryLabel} 목록`}
                                 </h2>
-                                {activeUser !== 'all' && (
+                                {currentUser && activeUser === currentUser.id && (
                                     <button
                                         onClick={() => setIsWriting(true)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-[#37352F] text-white rounded-lg text-sm font-bold hover:bg-black transition-all"
+                                        className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#FFD97D] to-[#FFB84D] text-white rounded-lg text-sm font-bold hover:shadow-lg transition-all"
                                     >
                                         <Plus size={18} /> 새 {categoryLabel} 추가
                                     </button>
@@ -629,14 +629,63 @@ function JournalPageContent() {
 
                             <div>
                                 <label className="block text-sm font-bold text-[#37352F] mb-2">내용</label>
+
+                                {/* Editor Toolbar */}
+                                <div className="flex items-center gap-2 mb-2 p-2 bg-[#FFFCF5] border border-[#F5E6D3] rounded-t-lg">
+                                    <input
+                                        type="file"
+                                        id="inline-image-upload"
+                                        multiple
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={handleImageSelect}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => document.getElementById('inline-image-upload')?.click()}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-[#FFD97D] to-[#FFB84D] text-white rounded text-xs font-bold hover:shadow-md transition-all"
+                                    >
+                                        <ImageIcon size={14} />
+                                        이미지 추가
+                                    </button>
+                                    <span className="text-[10px] text-[#8B8B7A]">
+                                        {uploadedImages.length > 0 && `${uploadedImages.length}개 이미지 추가됨`}
+                                    </span>
+                                </div>
+
+                                {/* Image Previews */}
+                                {uploadedImages.length > 0 && (
+                                    <div className="mb-2 p-3 bg-[#FFF9E6] border border-[#F5E6D3] rounded grid grid-cols-4 gap-2">
+                                        {uploadedImages.map((img, index) => (
+                                            <div key={index} className="relative group">
+                                                <img
+                                                    src={img.preview}
+                                                    alt={img.file.name}
+                                                    className="w-full h-20 object-cover rounded border border-[#F5E6D3]"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeImage(index)}
+                                                    className="absolute -top-1 -right-1 p-1 bg-rose-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                                                >
+                                                    <X size={10} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Text Area */}
                                 <textarea
                                     value={content}
                                     onChange={(e) => setContent(e.target.value)}
-                                    placeholder="여기에 내용을 작성하세요..."
+                                    placeholder="여기에 내용을 작성하세요...&#10;&#10;위의 '이미지 추가' 버튼을 클릭하여 사진을 삽입할 수 있습니다."
                                     rows={12}
-                                    className="w-full px-4 py-3 bg-[#FBFBFA] border border-[#EBEBEB] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none"
+                                    className="w-full px-4 py-3 bg-[#FFFEF9] border border-[#F5E6D3] rounded-b-lg focus:outline-none focus:ring-2 focus:ring-[#FFD97D]/30 focus:border-[#FFD97D] transition-all resize-none"
                                 />
-                                <p className="text-xs text-[#A1A1A1] mt-1">💡 첫 번째 줄이 자동으로 제목으로 설정됩니다.</p>
+                                <p className="text-xs text-[#8B8B7A] mt-2">
+                                    💡 첫 번째 줄이 자동으로 제목으로 설정됩니다. 이미지는 본문 하단에 자동으로 삽입됩니다.
+                                </p>
                             </div>
 
                             {(activeCategory === 'idea' || activeCategory === 'memo') && (
@@ -805,45 +854,6 @@ function JournalPageContent() {
                                                         >
                                                             <X size={14} />
                                                         </button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Images */}
-                                    <div>
-                                        <label className="text-xs font-medium text-[#787774] mb-1 block">이미지 업로드 (본문에 표시)</label>
-                                        <input
-                                            type="file"
-                                            multiple
-                                            accept="image/*"
-                                            onChange={handleImageSelect}
-                                            className={cn(
-                                                "w-full px-3 py-2 bg-white border border-[#EBEBEB] rounded text-sm focus:outline-none focus:ring-1",
-                                                activeCategory === 'idea'
-                                                    ? "focus:ring-amber-500 file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100"
-                                                    : "focus:ring-blue-500 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100",
-                                                "file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold"
-                                            )}
-                                        />
-                                        {uploadedImages.length > 0 && (
-                                            <div className="mt-3 grid grid-cols-3 gap-2">
-                                                {uploadedImages.map((img, index) => (
-                                                    <div key={index} className="relative group">
-                                                        <img
-                                                            src={img.preview}
-                                                            alt={img.file.name}
-                                                            className="w-full h-24 object-cover rounded border border-[#EBEBEB]"
-                                                        />
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => removeImage(index)}
-                                                            className="absolute top-1 right-1 p-1 bg-rose-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                                        >
-                                                            <X size={12} />
-                                                        </button>
-                                                        <div className="text-[10px] text-[#A1A1A1] mt-1 truncate">{img.file.name}</div>
                                                     </div>
                                                 ))}
                                             </div>
