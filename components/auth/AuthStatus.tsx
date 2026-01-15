@@ -13,12 +13,21 @@ export function AuthStatus() {
 
     const handleUpdateNickname = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!nickname.trim()) return;
+        const trimmedNickname = nickname.trim();
+        if (!trimmedNickname) {
+            alert('닉네임을 입력해 주세요.');
+            return;
+        }
 
         setIsUpdating(true);
-        await updateProfile({ name: nickname.trim() });
-        setIsUpdating(false);
-        setShowProfileSetup(false);
+        try {
+            await updateProfile({ name: trimmedNickname });
+            setShowProfileSetup(false);
+        } catch (err) {
+            alert('프로필 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+        } finally {
+            setIsUpdating(false);
+        }
     };
 
     if (isLoading) {
@@ -64,6 +73,15 @@ export function AuthStatus() {
                     >
                         {isUpdating ? '저장 중...' : '시작하기'}
                     </button>
+                    {currentUser.name && (
+                        <button
+                            type="button"
+                            onClick={() => setShowProfileSetup(false)}
+                            className="w-full py-2 text-xs text-[#787774] hover:text-[#37352F]"
+                        >
+                            취소
+                        </button>
+                    )}
                 </form>
             </div>
         );

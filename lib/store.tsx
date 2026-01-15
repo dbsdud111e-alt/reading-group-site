@@ -131,15 +131,15 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
             if (data) {
                 setCurrentUser({
                     id: data.id,
-                    name: data.display_name || '익명 사용자',
-                    avatar_url: data.avatar_url,
+                    name: data.display_name || supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || '',
+                    avatar_url: data.avatar_url || supabaseUser.user_metadata?.avatar_url,
                     email: supabaseUser.email
                 });
             } else {
                 // Initial login, profile doesn't exist yet
                 setCurrentUser({
                     id: supabaseUser.id,
-                    name: '', // Will trigger nickname setup
+                    name: supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || '',
                     avatar_url: supabaseUser.user_metadata?.avatar_url,
                     email: supabaseUser.email
                 });
@@ -263,6 +263,7 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
             setCurrentUser(prev => prev ? { ...prev, name: updates.name } : null);
         } else {
             console.error('Error updating profile:', error.message);
+            throw new Error(error.message);
         }
     };
 
