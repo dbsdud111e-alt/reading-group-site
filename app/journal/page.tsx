@@ -36,6 +36,7 @@ function JournalPageContent() {
     const [formMaterialTags, setFormMaterialTags] = useState<string[]>([]);
     const [links, setLinks] = useState<string[]>(['']);
     const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+    const [uploadedImages, setUploadedImages] = useState<{ file: File; preview: string }[]>([]);
 
     const currentPosts = journalPosts.filter(p => {
         const matchesCategory = activeCategory === 'all' || p.category === activeCategory;
@@ -57,6 +58,26 @@ function JournalPageContent() {
         setUploadedFiles(prev => prev.filter((_, i) => i !== index));
     };
 
+    const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        const imageFiles = files.filter(file => file.type.startsWith('image/'));
+
+        const newImages = imageFiles.map(file => ({
+            file,
+            preview: URL.createObjectURL(file)
+        }));
+
+        setUploadedImages(prev => [...prev, ...newImages]);
+    };
+
+    const removeImage = (index: number) => {
+        setUploadedImages(prev => {
+            // Revoke the object URL to free memory
+            URL.revokeObjectURL(prev[index].preview);
+            return prev.filter((_, i) => i !== index);
+        });
+    };
+
     const addLinkField = () => {
         setLinks(prev => [...prev, '']);
     };
@@ -69,7 +90,7 @@ function JournalPageContent() {
         setLinks(prev => prev.filter((_, i) => i !== index));
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!content.trim()) {
             alert('내용을 입력해주세요.');
             return;
@@ -83,7 +104,21 @@ function JournalPageContent() {
         // Extract title from first line
         const lines = content.split('\n');
         const extractedTitle = lines[0].trim() || '제목 없음';
-        const extractedContent = lines.slice(1).join('\n').trim();
+        let extractedContent = lines.slice(1).join('\n').trim();
+
+        // Process images and append to content
+        if (uploadedImages.length > 0) {
+            extractedContent += '\n\n';
+            for (const img of uploadedImages) {
+                // Convert image to base64
+                const reader = new FileReader();
+                const base64 = await new Promise<string>((resolve) => {
+                    reader.onloadend = () => resolve(reader.result as string);
+                    reader.readAsDataURL(img.file);
+                });
+                extractedContent += `![${img.file.name}](${base64})\n`;
+            }
+        }
 
         // Process files
         const fileData = uploadedFiles.map(file => ({
@@ -127,6 +162,9 @@ function JournalPageContent() {
         setMaterialStatus('draft');
         setFormMaterialTags([]);
         setUploadedFiles([]);
+        // Clean up image previews
+        uploadedImages.forEach(img => URL.revokeObjectURL(img.preview));
+        setUploadedImages([]);
         setIsWriting(false);
     };
 
@@ -447,7 +485,28 @@ function JournalPageContent() {
                                                     </div>
                                                 )}
                                             </div>
-                                            <p className="text-sm text-[#787774] whitespace-pre-wrap mb-3">{post.content}</p>
+
+                                            {/* Content with images */}
+                                            <div className="text-sm text-[#787774] mb-3">
+                                                {post.content.split(/!\[([^\]]*)\]\(([^)]+)\)/).map((part, idx) => {
+                                                    // Every third element starting from index 2 is an image URL
+                                                    if (idx % 3 === 2) {
+                                                        const altText = post.content.split(/!\[([^\]]*)\]\(([^)]+)\)/)[idx - 1];
+                                                        return (
+                                                            <img
+                                                                key={idx}
+                                                                src={part}
+                                                                alt={altText || '이미지'}
+                                                                className="max-w-full h-auto rounded-lg border border-[#EBEBEB] my-3"
+                                                            />
+                                                        );
+                                                    } else if (idx % 3 === 0) {
+                                                        // Regular text
+                                                        return part ? <div key={idx} className="whitespace-pre-wrap">{part}</div> : null;
+                                                    }
+                                                    return null;
+                                                })}
+                                            </div>
 
                                             {((post.links && post.links.length > 0) || (post.files && post.files.length > 0)) && (
                                                 <div className="flex flex-wrap gap-2 pt-3 border-t border-[#EBEBEB]">
@@ -746,6 +805,45 @@ function JournalPageContent() {
                                                         >
                                                             <X size={14} />
                                                         </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Images */}
+                                    <div>
+                                        <label className="text-xs font-medium text-[#787774] mb-1 block">이미지 업로드 (본문에 표시)</label>
+                                        <input
+                                            type="file"
+                                            multiple
+                                            accept="image/*"
+                                            onChange={handleImageSelect}
+                                            className={cn(
+                                                "w-full px-3 py-2 bg-white border border-[#EBEBEB] rounded text-sm focus:outline-none focus:ring-1",
+                                                activeCategory === 'idea'
+                                                    ? "focus:ring-amber-500 file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100"
+                                                    : "focus:ring-blue-500 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100",
+                                                "file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold"
+                                            )}
+                                        />
+                                        {uploadedImages.length > 0 && (
+                                            <div className="mt-3 grid grid-cols-3 gap-2">
+                                                {uploadedImages.map((img, index) => (
+                                                    <div key={index} className="relative group">
+                                                        <img
+                                                            src={img.preview}
+                                                            alt={img.file.name}
+                                                            className="w-full h-24 object-cover rounded border border-[#EBEBEB]"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeImage(index)}
+                                                            className="absolute top-1 right-1 p-1 bg-rose-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        >
+                                                            <X size={12} />
+                                                        </button>
+                                                        <div className="text-[10px] text-[#A1A1A1] mt-1 truncate">{img.file.name}</div>
                                                     </div>
                                                 ))}
                                             </div>

@@ -108,13 +108,12 @@ TO authenticated
 USING (auth.uid() = id)
 WITH CHECK (auth.uid() = id);
 
--- 관리자만 다른 사용자 삭제 가능 (관리자 이메일 확인)
+-- 관리자만 다른 사용자 삭제 가능
+-- Note: Replace 'ADMIN_USER_ID_HERE' with your actual admin user's UUID
 CREATE POLICY "Only admin can delete users"
 ON public.users FOR DELETE
 TO authenticated
 USING (
-  auth.uid() IN (
-    SELECT id FROM public.users WHERE email = 'admin@math-reading.com'
-  )
-  OR auth.uid() = id  -- 자신의 계정은 삭제 가능
+  auth.uid() = id  -- 자신의 계정은 삭제 가능
+  -- OR auth.uid() = 'ADMIN_USER_ID_HERE'::uuid  -- 관리자 ID로 교체하세요
 );
