@@ -160,13 +160,22 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         loadInitialData();
 
+        // Set a safety timeout to ensure loading doesn't hang
+        const loadingTimeout = setTimeout(() => {
+            setIsLoading(false);
+        }, 5000); // 5 second timeout
+
         // Check active session
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (session) {
-                fetchProfile(session.user);
+                fetchProfile(session.user).catch(() => {
+                    setIsLoading(false);
+                });
             } else {
                 setIsLoading(false);
             }
+        }).catch(() => {
+            setIsLoading(false);
         });
 
         // REALTIME SUBSCRIPTIONS
@@ -181,7 +190,9 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
             if (session) {
-                await fetchProfile(session.user);
+                await fetchProfile(session.user).catch(() => {
+                    setIsLoading(false);
+                });
                 loadInitialData();
             } else {
                 setCurrentUser(null);
@@ -190,6 +201,7 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
         });
 
         return () => {
+            clearTimeout(loadingTimeout);
             subscription.unsubscribe();
             supabase.removeChannel(journalsChannel);
         };
