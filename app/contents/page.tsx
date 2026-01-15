@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Link from 'next/link';
-import { Layers, FileText, Download, ExternalLink, Filter, Search, Plus, X, Check, BookOpen, Link as LinkIcon, Upload, Edit3, Trash2, MessageCircle, ArrowRight, Share2 } from 'lucide-react';
+import { Layers, FileText, Download, ExternalLink, Filter, Search, Plus, X, Check, BookOpen, Link as LinkIcon, Upload, Edit3, Trash2, MessageCircle, ArrowRight, Share2, Image as ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReading, JournalPost, Comment } from '@/lib/store';
 
@@ -24,7 +24,9 @@ export default function ContentsPage() {
     const [materialTags, setMaterialTags] = useState<string[]>([]);
     const [links, setLinks] = useState<string[]>(['']);
     const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+    const [uploadedImages, setUploadedImages] = useState<{ file: File; preview: string }[]>([]);
     const [selectedReferences, setSelectedReferences] = useState<string[]>([]);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     const materials = journalPosts.filter(p => p.category === 'idea');
     const viewingPost = journalPosts.find(p => p.id === viewingPostId);
@@ -51,6 +53,42 @@ export default function ContentsPage() {
         return '알 수 없음';
     };
 
+    const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        const imageFiles = files.filter(file => file.type.startsWith('image/'));
+
+        const textarea = textareaRef.current;
+        const cursorPos = textarea?.selectionStart || content.length;
+
+        let newContent = content;
+        const newImages: { file: File; preview: string }[] = [];
+
+        for (const file of imageFiles) {
+            const preview = URL.createObjectURL(file);
+            newImages.push({ file, preview });
+
+            const base64 = await new Promise<string>((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.readAsDataURL(file);
+            });
+
+            const imageMarkdown = `\n![${file.name}](${base64})\n`;
+            newContent = newContent.slice(0, cursorPos) + imageMarkdown + newContent.slice(cursorPos);
+        }
+
+        setContent(newContent);
+        setUploadedImages(prev => [...prev, ...newImages]);
+        e.target.value = '';
+    };
+
+    const removeImage = (index: number) => {
+        setUploadedImages(prev => {
+            URL.revokeObjectURL(prev[index].preview);
+            return prev.filter((_, i) => i !== index);
+        });
+    };
+
     const resetForm = () => {
         setTitle('');
         setContent('');
@@ -59,6 +97,8 @@ export default function ContentsPage() {
         setMaterialTags([]);
         setLinks(['']);
         setUploadedFiles([]);
+        uploadedImages.forEach(img => URL.revokeObjectURL(img.preview));
+        setUploadedImages([]);
         setSelectedReferences([]);
         setEditingPostId(null);
         setIsUploading(false);
@@ -173,13 +213,63 @@ export default function ContentsPage() {
 
                                 <div>
                                     <label className="block text-sm font-bold text-[#37352F] mb-2">상세 내용</label>
+
+                                    {/* Editor Toolbar */}
+                                    <div className="flex items-center gap-2 mb-2 p-2 bg-[#FFFCF5] border border-[#F5E6D3] rounded-t-lg">
+                                        <input
+                                            type="file"
+                                            id="contents-image-upload"
+                                            multiple
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={handleImageSelect}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => document.getElementById('contents-image-upload')?.click()}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-[#FFD97D] to-[#FFB84D] text-white rounded text-xs font-bold hover:shadow-md transition-all"
+                                        >
+                                            <ImageIcon size={14} />
+                                            이미지 추가
+                                        </button>
+                                        <span className="text-[10px] text-[#8B8B7A]">
+                                            {uploadedImages.length > 0 && `${uploadedImages.length}개 이미지 추가됨`}
+                                        </span>
+                                    </div>
+
+                                    {/* Image Previews */}
+                                    {uploadedImages.length > 0 && (
+                                        <div className="mb-2 p-3 bg-[#FFF9E6] border border-[#F5E6D3] rounded grid grid-cols-4 gap-2">
+                                            {uploadedImages.map((img, index) => (
+                                                <div key={index} className="relative group">
+                                                    <img
+                                                        src={img.preview}
+                                                        alt={img.file.name}
+                                                        className="w-full h-20 object-cover rounded border border-[#F5E6D3]"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeImage(index)}
+                                                        className="absolute -top-1 -right-1 p-1 bg-rose-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                                                    >
+                                                        <X size={10} />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
                                     <textarea
+                                        ref={textareaRef}
                                         value={content}
                                         onChange={(e) => setContent(e.target.value)}
-                                        placeholder="자료에 대한 상세 설명을 작성하세요"
-                                        rows={4}
-                                        className="w-full px-4 py-3 bg-[#FBFBFA] border border-[#EBEBEB] rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm font-medium resize-none"
+                                        placeholder="자료에 대한 상세 설명을 작성하세요&#10;&#10;위의 '이미지 추가' 버튼을 클릭하면 커서 위치에 이미지가 삽입됩니다."
+                                        rows={6}
+                                        className="w-full px-4 py-3 bg-[#FFFEF9] border border-[#F5E6D3] rounded-b-lg focus:outline-none focus:ring-2 focus:ring-[#FFD97D]/30 focus:border-[#FFD97D] transition-all text-sm font-medium resize-none"
                                     />
+                                    <p className="text-xs text-[#8B8B7A] mt-2">
+                                        💡 이미지는 커서 위치에 삽입되며, 텍스트와 자유롭게 섞어 쓸 수 있습니다.
+                                    </p>
                                 </div>
 
                                 <div>

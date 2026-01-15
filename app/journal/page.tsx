@@ -58,16 +58,40 @@ function JournalPageContent() {
         setUploadedFiles(prev => prev.filter((_, i) => i !== index));
     };
 
-    const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
         const imageFiles = files.filter(file => file.type.startsWith('image/'));
 
-        const newImages = imageFiles.map(file => ({
-            file,
-            preview: URL.createObjectURL(file)
-        }));
+        // Get cursor position
+        const textarea = textareaRef.current;
+        const cursorPos = textarea?.selectionStart || content.length;
 
+        let newContent = content;
+        const newImages: { file: File; preview: string }[] = [];
+
+        for (const file of imageFiles) {
+            const preview = URL.createObjectURL(file);
+            newImages.push({ file, preview });
+
+            // Convert to base64 for inline insertion
+            const base64 = await new Promise<string>((resolve) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.readAsDataURL(file);
+            });
+
+            // Insert image markdown at cursor position
+            const imageMarkdown = `\n![${file.name}](${base64})\n`;
+            newContent = newContent.slice(0, cursorPos) + imageMarkdown + newContent.slice(cursorPos);
+        }
+
+        setContent(newContent);
         setUploadedImages(prev => [...prev, ...newImages]);
+
+        // Reset file input
+        e.target.value = '';
     };
 
     const removeImage = (index: number) => {
@@ -104,21 +128,7 @@ function JournalPageContent() {
         // Extract title from first line
         const lines = content.split('\n');
         const extractedTitle = lines[0].trim() || '제목 없음';
-        let extractedContent = lines.slice(1).join('\n').trim();
-
-        // Process images and append to content
-        if (uploadedImages.length > 0) {
-            extractedContent += '\n\n';
-            for (const img of uploadedImages) {
-                // Convert image to base64
-                const reader = new FileReader();
-                const base64 = await new Promise<string>((resolve) => {
-                    reader.onloadend = () => resolve(reader.result as string);
-                    reader.readAsDataURL(img.file);
-                });
-                extractedContent += `![${img.file.name}](${base64})\n`;
-            }
-        }
+        const extractedContent = lines.slice(1).join('\n').trim();
 
         // Process files
         const fileData = uploadedFiles.map(file => ({
@@ -677,14 +687,15 @@ function JournalPageContent() {
 
                                 {/* Text Area */}
                                 <textarea
+                                    ref={textareaRef}
                                     value={content}
                                     onChange={(e) => setContent(e.target.value)}
-                                    placeholder="여기에 내용을 작성하세요...&#10;&#10;위의 '이미지 추가' 버튼을 클릭하여 사진을 삽입할 수 있습니다."
+                                    placeholder="여기에 내용을 작성하세요...&#10;&#10;위의 '이미지 추가' 버튼을 클릭하면 커서 위치에 이미지가 삽입됩니다."
                                     rows={12}
                                     className="w-full px-4 py-3 bg-[#FFFEF9] border border-[#F5E6D3] rounded-b-lg focus:outline-none focus:ring-2 focus:ring-[#FFD97D]/30 focus:border-[#FFD97D] transition-all resize-none"
                                 />
                                 <p className="text-xs text-[#8B8B7A] mt-2">
-                                    💡 첫 번째 줄이 자동으로 제목으로 설정됩니다. 이미지는 본문 하단에 자동으로 삽입됩니다.
+                                    💡 첫 번째 줄이 자동으로 제목으로 설정됩니다. 이미지는 커서 위치에 삽입되며, 텍스트와 자유롭게 섞어 쓸 수 있습니다.
                                 </p>
                             </div>
 
