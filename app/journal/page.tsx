@@ -1,0 +1,777 @@
+"use client";
+
+import React, { useState, useRef, Suspense } from 'react';
+import Link from 'next/link';
+import { ChevronLeft, List, Type, HelpCircle, Heart, Lightbulb, Plus, Edit2, Trash2, Upload, Link as LinkIcon, Check, X, FileText, User, MessageSquare, BookOpen } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { cn } from '@/lib/utils';
+import { useReading, JournalPost } from '@/lib/store';
+
+type Category = 'memo' | 'question' | 'feeling' | 'idea';
+
+const categories: { id: Category; label: string; icon: any; color: string }[] = [
+    { id: 'question', label: '질문', icon: HelpCircle, color: 'text-rose-600' },
+    { id: 'idea', label: '수업 아이디어 및 콘텐츠', icon: Lightbulb, color: 'text-amber-600' },
+    { id: 'memo', label: '메모 및 요약정리', icon: List, color: 'text-gray-600' },
+    { id: 'feeling', label: '느낀점', icon: Heart, color: 'text-green-600' },
+];
+
+function JournalPageContent() {
+    const { users, journalPosts, books, addJournalPost, updateJournalPost, deleteJournalPost, updateUserName, addComment, deleteComment, materialTags: storeMaterialTags, addMaterialTag, deleteMaterialTag, globalFilterTags, setGlobalFilterTags, currentUser } = useReading();
+
+    const searchParams = useSearchParams();
+    const initialBookId = searchParams?.get('bookId');
+
+    const [activeUser, setActiveUser] = useState<string>('all');
+    const [activeBook, setActiveBook] = useState<string>(initialBookId || 'all');
+    const [activeCategory, setActiveCategory] = useState<Category>('question');
+    const [isWriting, setIsWriting] = useState(false);
+    const [editingPost, setEditingPost] = useState<string | null>(null);
+    const [editingUserName, setEditingUserName] = useState<string | null>(null);
+    const [tempUserName, setTempUserName] = useState('');
+
+    // Form states
+    const [content, setContent] = useState('');
+    const [materialStatus, setMaterialStatus] = useState<'draft' | 'finished'>('draft');
+    const [materialTags, setMaterialTags] = useState<string[]>([]);
+    const [links, setLinks] = useState<string[]>(['']);
+    const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+
+    const currentPosts = journalPosts.filter(p => {
+        const matchesCategory = p.category === activeCategory;
+        const matchesUser = activeUser === 'all' || p.user_id === activeUser;
+        const matchesBook = activeBook === 'all' || p.book_id === activeBook;
+        const bookExists = books.some(b => b.id === p.book_id);
+
+        // Tag filtering: Only apply for categories that have tags or if tags are selected
+        const matchesTags = globalFilterTags.length === 0 || (p.material_tags && globalFilterTags.every(tag => p.material_tags!.includes(tag)));
+
+        return matchesCategory && matchesUser && matchesBook && bookExists && matchesTags;
+    }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        setUploadedFiles(prev => [...prev, ...files]);
+    };
+
+    const removeFile = (index: number) => {
+        setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const addLinkField = () => {
+        setLinks(prev => [...prev, '']);
+    };
+
+    const updateLink = (index: number, value: string) => {
+        setLinks(prev => prev.map((link, i) => i === index ? value : link));
+    };
+
+    const removeLink = (index: number) => {
+        setLinks(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleSubmit = () => {
+        if (!content.trim()) {
+            alert('내용을 입력해주세요.');
+            return;
+        }
+
+        if (activeUser === 'all') {
+            alert('글을 작성하려면 특정 유저를 선택해주세요.');
+            return;
+        }
+
+        // Extract title from first line
+        const lines = content.split('\n');
+        const extractedTitle = lines[0].trim() || '제목 없음';
+        const extractedContent = lines.slice(1).join('\n').trim();
+
+        // Process files
+        const fileData = uploadedFiles.map(file => ({
+            url: URL.createObjectURL(file),
+            name: file.name
+        }));
+
+        // Filter out empty links
+        const validLinks = links.filter(link => link.trim() !== '');
+
+        if (editingPost) {
+            updateJournalPost(editingPost, {
+                title: extractedTitle,
+                content: extractedContent,
+                links: validLinks.length > 0 ? validLinks : undefined,
+                files: fileData.length > 0 ? fileData : undefined,
+                material_status: activeCategory === 'idea' ? materialStatus : undefined,
+                material_tags: activeCategory === 'idea' ? materialTags : undefined,
+            });
+            setEditingPost(null);
+        } else {
+            addJournalPost({
+                id: Math.random().toString(36).substr(2, 9),
+                user_id: activeUser,
+                book_id: activeBook === 'all' ? undefined : activeBook,
+                category: activeCategory,
+                title: extractedTitle,
+                content: extractedContent,
+                links: validLinks.length > 0 ? validLinks : undefined,
+                files: fileData.length > 0 ? fileData : undefined,
+                material_status: activeCategory === 'idea' ? materialStatus : undefined,
+                material_tags: activeCategory === 'idea' ? materialTags : undefined,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            });
+        }
+
+        // Reset form
+        setContent('');
+        setLinks(['']);
+        setMaterialStatus('draft');
+        setMaterialTags([]);
+        setUploadedFiles([]);
+        setIsWriting(false);
+    };
+
+    const handleEdit = (post: JournalPost) => {
+        setEditingPost(post.id);
+        setContent(post.title + '\n' + post.content);
+        setLinks(post.links && post.links.length > 0 ? post.links : ['']);
+        if (post.category === 'idea') {
+            setMaterialStatus(post.material_status || 'draft');
+            setMaterialTags(post.material_tags || []);
+        }
+        setMaterialTags(post.material_tags || []); // Also for memo if applicable
+        setActiveUser(post.user_id);
+        setIsWriting(true);
+    };
+
+    const handleDelete = (postId: string) => {
+        if (confirm('정말 삭제하시겠습니까?')) {
+            deleteJournalPost(postId);
+        }
+    };
+
+    const handleUserNameEdit = (userId: string) => {
+        const user = users.find(u => u.id === userId);
+        if (user) {
+            setEditingUserName(userId);
+            setTempUserName(user.name);
+        }
+    };
+
+    const handleUserNameSave = () => {
+        if (editingUserName && tempUserName.trim()) {
+            updateUserName(editingUserName, tempUserName.trim());
+            setEditingUserName(null);
+        }
+    };
+
+    const getUserName = (userId: string) => {
+        // First check in our store users
+        const storeUser = users.find(u => u.id === userId);
+        if (storeUser) return storeUser.name;
+
+        // If it's the current user (from Auth), return their name
+        if (currentUser?.id === userId) return currentUser.name;
+
+        return '알 수 없음';
+    };
+
+    const getBookTitle = (bookId: string | undefined) => {
+        if (!bookId) return '도서 연결 없음';
+        return books.find(b => b.id === bookId)?.title || '알 수 없는 도서';
+    };
+
+    const categoryLabel = categories.find(c => c.id === activeCategory)?.label || '';
+
+    return (
+        <div className="max-w-[1200px] mx-auto px-6 py-10 md:px-12 md:py-16">
+            <div className="mb-8">
+                <Link href="/books" className="flex items-center gap-1 text-sm text-[#787774] hover:text-[#37352F] mb-4 transition-colors">
+                    <ChevronLeft size={16} /> 서재로 돌아가기
+                </Link>
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                    <div>
+                        <h1 className="text-4xl font-bold text-[#37352F] mb-2">기록하기</h1>
+                        <p className="text-[#787774]">함께 읽은 책에 대한 생각과 아이디어를 공유하세요.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="bg-white border border-[#EBEBEB] rounded-2xl shadow-sm overflow-hidden">
+                {/* User Tabs */}
+                <div className="flex items-center justify-between border-b border-[#EBEBEB] bg-[#FBFBFA] px-4 py-3">
+                    <div className="flex items-center gap-2">
+                        {/* All Users Tab */}
+                        <button
+                            onClick={() => setActiveUser('all')}
+                            className={cn(
+                                "flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors",
+                                activeUser === 'all'
+                                    ? "bg-[#37352F] text-white"
+                                    : "text-[#787774] hover:bg-[#F1F1F0]"
+                            )}
+                        >
+                            <User size={14} />
+                            전체 게시판
+                        </button>
+
+                        {/* Individual User Tabs */}
+                        {users.map((user) => (
+                            <button
+                                key={user.id}
+                                onClick={() => {
+                                    setActiveUser(user.id);
+                                }}
+                                className={cn(
+                                    "px-3 py-1.5 text-sm font-medium rounded-lg transition-colors",
+                                    activeUser === user.id
+                                        ? "bg-[#37352F] text-white"
+                                        : "text-[#787774] hover:bg-[#F1F1F0]"
+                                )}
+                            >
+                                {user.name}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Settings Button */}
+                    <button
+                        onClick={() => setEditingUserName(editingUserName ? null : 'settings')}
+                        className={cn(
+                            "flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors",
+                            editingUserName === 'settings'
+                                ? "bg-blue-500 text-white"
+                                : "text-[#787774] hover:bg-[#F1F1F0]"
+                        )}
+                    >
+                        <Edit2 size={14} />
+                        이름 관리
+                    </button>
+                </div>
+
+                {/* User Management Panel */}
+                {editingUserName === 'settings' && (
+                    <div className="border-b border-[#EBEBEB] bg-blue-50/30 px-4 py-4">
+                        <h3 className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-3">사용자 이름 수정</h3>
+                        <div className="space-y-2">
+                            {users.map((user) => (
+                                <div key={user.id} className="flex items-center gap-2 bg-white p-2 rounded border border-[#EBEBEB]">
+                                    <input
+                                        type="text"
+                                        defaultValue={user.name}
+                                        onBlur={(e) => {
+                                            if (e.target.value.trim() && e.target.value !== user.name) {
+                                                updateUserName(user.id, e.target.value.trim());
+                                            }
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.currentTarget.blur();
+                                            }
+                                        }}
+                                        className="flex-1 px-3 py-1.5 text-sm border border-[#EBEBEB] rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    />
+                                    <span className="text-xs text-[#A1A1A1]">Enter로 저장</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Book Filter Tabs */}
+                <div className="flex flex-wrap items-center gap-2 border-b border-[#EBEBEB] bg-white px-4 py-2 overflow-x-auto no-scrollbar">
+                    <button
+                        onClick={() => setActiveBook('all')}
+                        className={cn(
+                            "whitespace-nowrap px-3 py-1.5 text-[11px] font-bold rounded-full transition-all border",
+                            activeBook === 'all'
+                                ? "bg-amber-100 text-amber-700 border-amber-200"
+                                : "text-[#787774] border-transparent hover:bg-[#F1F1F0]"
+                        )}
+                    >
+                        📚 전체 도서
+                    </button>
+                    {books.map((book) => (
+                        <button
+                            key={book.id}
+                            onClick={() => setActiveBook(book.id!)}
+                            className={cn(
+                                "whitespace-nowrap px-3 py-1.5 text-[11px] font-bold rounded-full transition-all border",
+                                activeBook === book.id
+                                    ? "bg-blue-100 text-blue-700 border-blue-200"
+                                    : "text-[#787774] border-transparent hover:bg-[#F1F1F0]"
+                            )}
+                        >
+                            {book.title}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Category Tabs */}
+                <div className="flex flex-wrap border-b border-[#EBEBEB] bg-white">
+                    {categories.map((cat) => (
+                        <button
+                            key={cat.id}
+                            onClick={() => {
+                                setActiveCategory(cat.id);
+                                setIsWriting(false);
+                            }}
+                            className={cn(
+                                "flex items-center gap-2 px-5 py-4 text-sm font-bold transition-all border-b-2 relative",
+                                activeCategory === cat.id
+                                    ? `${cat.color} border-current bg-[#FBFBFA]`
+                                    : "text-[#787774] border-transparent hover:bg-[#F9F9F8]"
+                            )}
+                        >
+                            <cat.icon size={16} />
+                            {cat.label}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Global Tag Filter (Sync with Contents Board) */}
+                <div className="flex flex-wrap items-center gap-4 bg-[#FBFBFA] px-6 py-3 border-b border-[#EBEBEB]">
+                    <span className="text-[11px] font-bold text-[#37352F]">태그 필터:</span>
+                    <div className="flex flex-wrap gap-2">
+                        {storeMaterialTags.map(tag => (
+                            <button
+                                key={tag}
+                                onClick={() => {
+                                    setGlobalFilterTags(
+                                        globalFilterTags.includes(tag)
+                                            ? globalFilterTags.filter(t => t !== tag)
+                                            : [...globalFilterTags, tag]
+                                    );
+                                }}
+                                className={cn(
+                                    "px-2.5 py-1 text-[10px] font-bold rounded-full border transition-all",
+                                    globalFilterTags.includes(tag)
+                                        ? "bg-blue-50 text-blue-600 border-blue-200"
+                                        : "bg-white text-[#A1A1A1] border-[#EBEBEB] hover:bg-white hover:border-[#D3D1CB]"
+                                )}
+                            >
+                                #{tag}
+                            </button>
+                        ))}
+                        {globalFilterTags.length > 0 && (
+                            <button
+                                onClick={() => setGlobalFilterTags([])}
+                                className="px-2.5 py-1 text-[10px] font-bold text-rose-500 hover:bg-rose-50 rounded-full transition-all"
+                            >
+                                필터 초기화
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Content Area */}
+                <div className="p-8">
+                    {!isWriting ? (
+                        <div>
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-xl font-bold text-[#37352F]">
+                                    {activeUser === 'all' ? `전체 ${categoryLabel}` : `${categoryLabel} 목록`}
+                                </h2>
+                                {activeUser !== 'all' && (
+                                    <button
+                                        onClick={() => setIsWriting(true)}
+                                        className="flex items-center gap-2 px-4 py-2 bg-[#37352F] text-white rounded-lg text-sm font-bold hover:bg-black transition-all"
+                                    >
+                                        <Plus size={18} /> 새 {categoryLabel} 추가
+                                    </button>
+                                )}
+                            </div>
+
+                            {currentPosts.length === 0 ? (
+                                <div className="py-16 text-center text-[#A1A1A1] border-2 border-dashed border-[#F1F1F0] rounded-xl">
+                                    <p>아직 작성된 {categoryLabel}이(가) 없습니다.</p>
+                                    {activeUser !== 'all' && <p className="text-sm mt-2">위의 버튼을 눌러 첫 번째 글을 작성해보세요.</p>}
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {currentPosts.map((post) => (
+                                        <div key={post.id} className="p-5 bg-[#FBFBFA] border border-[#EBEBEB] rounded-xl hover:shadow-sm transition-all">
+                                            <div className="flex items-start justify-between mb-3">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <h3 className="text-lg font-bold text-[#37352F]">{post.title}</h3>
+                                                        {activeBook === 'all' && (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold rounded">
+                                                                <BookOpen size={10} /> {getBookTitle(post.book_id)}
+                                                            </span>
+                                                        )}
+                                                        {post.material_status && (
+                                                            <span className={cn(
+                                                                "px-2 py-0.5 text-[10px] font-bold rounded uppercase",
+                                                                post.material_status === 'draft'
+                                                                    ? "bg-gray-100 text-gray-500"
+                                                                    : "bg-green-100 text-green-600"
+                                                            )}>
+                                                                {post.material_status === 'draft' ? '아이디어' : '완성본'}
+                                                            </span>
+                                                        )}
+                                                        {post.material_tags?.map(tag => (
+                                                            <span key={tag} className="text-[10px] text-blue-600 font-medium">#{tag}</span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                {activeUser !== 'all' && (
+                                                    <div className="flex flex-col items-end gap-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                onClick={() => handleEdit(post)}
+                                                                className="p-1.5 hover:bg-blue-100 rounded text-blue-600 transition-colors"
+                                                            >
+                                                                <Edit2 size={16} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDelete(post.id)}
+                                                                className="p-1.5 hover:bg-rose-100 rounded text-rose-600 transition-colors"
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        </div>
+                                                        <div className="text-[10px] text-[#A1A1A1]">
+                                                            {new Date(post.created_at).toLocaleString('ko-KR')}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {activeUser === 'all' && (
+                                                    <div className="flex flex-col items-end">
+                                                        <div className="text-xs font-bold text-[#37352F] mb-1">
+                                                            {getUserName(post.user_id)}
+                                                        </div>
+                                                        <div className="text-[10px] text-[#A1A1A1]">
+                                                            {new Date(post.created_at).toLocaleString('ko-KR')}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <p className="text-sm text-[#787774] whitespace-pre-wrap mb-3">{post.content}</p>
+
+                                            {((post.links && post.links.length > 0) || (post.files && post.files.length > 0)) && (
+                                                <div className="flex flex-wrap gap-2 pt-3 border-t border-[#EBEBEB]">
+                                                    {post.links?.map((link, idx) => (
+                                                        <a
+                                                            key={idx}
+                                                            href={link}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-600 text-xs font-medium rounded hover:bg-blue-100 transition-colors"
+                                                        >
+                                                            <LinkIcon size={12} /> 링크 {idx + 1}
+                                                        </a>
+                                                    ))}
+                                                    {post.files?.map((file, idx) => (
+                                                        <a
+                                                            key={idx}
+                                                            href={file.url}
+                                                            download={file.name}
+                                                            className="flex items-center gap-1 px-3 py-1 bg-green-50 text-green-600 text-xs font-medium rounded hover:bg-green-100 transition-colors"
+                                                        >
+                                                            <FileText size={12} /> {file.name}
+                                                        </a>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Comment Section */}
+                                            <div className="border-t border-[#EBEBEB] pt-4">
+                                                <div className="flex items-center gap-2 mb-4 text-[#37352F]">
+                                                    <MessageSquare size={16} />
+                                                    <span className="text-sm font-bold">댓글 {post.comments?.length || 0}</span>
+                                                </div>
+
+                                                {/* Comment List */}
+                                                {post.comments && post.comments.length > 0 && (
+                                                    <div className="space-y-3 mb-4 ml-2">
+                                                        {post.comments.map((comment) => (
+                                                            <div key={comment.id} className="flex flex-col gap-1 p-3 bg-white border border-[#F1F1F0] rounded-lg">
+                                                                <div className="flex items-center justify-end gap-2 mb-1">
+                                                                    <span className="text-[10px] text-[#A1A1A1]">{new Date(comment.created_at).toLocaleDateString('ko-KR')}</span>
+                                                                    {currentUser?.id === comment.user_id && (
+                                                                        <button
+                                                                            onClick={() => deleteComment(post.id, comment.id)}
+                                                                            className="text-rose-500 hover:text-rose-700 transition-colors"
+                                                                        >
+                                                                            <X size={12} />
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                                <p className="text-xs text-[#787774]">{comment.content}</p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                {/* Comment Input */}
+                                                <div className="flex flex-col gap-2">
+                                                    <div className="flex gap-2">
+                                                        <input
+                                                            type="text"
+                                                            placeholder="댓글을 입력하세요..."
+                                                            className="flex-1 px-3 py-2 bg-white border border-[#EBEBEB] rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter' && e.currentTarget.value.trim() && currentUser) {
+                                                                    addComment(post.id, {
+                                                                        id: Math.random().toString(36).substr(2, 9),
+                                                                        user_id: currentUser.id,
+                                                                        content: e.currentTarget.value.trim(),
+                                                                        created_at: new Date().toISOString()
+                                                                    });
+                                                                    e.currentTarget.value = '';
+                                                                }
+                                                            }}
+                                                        />
+                                                        <button
+                                                            onClick={(e) => {
+                                                                const input = e.currentTarget.previousElementSibling as HTMLInputElement;
+                                                                if (input.value.trim() && currentUser) {
+                                                                    addComment(post.id, {
+                                                                        id: Math.random().toString(36).substr(2, 9),
+                                                                        user_id: currentUser.id,
+                                                                        content: input.value.trim(),
+                                                                        created_at: new Date().toISOString()
+                                                                    });
+                                                                    input.value = '';
+                                                                }
+                                                            }}
+                                                            className="px-3 py-2 bg-[#37352F] text-white text-xs font-bold rounded hover:bg-black transition-all"
+                                                        >
+                                                            게시
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="space-y-6">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-xl font-bold text-[#37352F]">
+                                    {editingPost ? `${categoryLabel} 수정` : `새 ${categoryLabel} 작성`}
+                                </h2>
+                                <button
+                                    onClick={() => {
+                                        setIsWriting(false);
+                                        setEditingPost(null);
+                                        setContent('');
+                                        setLinks(['']);
+                                        setUploadedFiles([]);
+                                    }}
+                                    className="text-sm text-[#787774] hover:text-[#37352F]"
+                                >
+                                    취소
+                                </button>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-[#37352F] mb-2">내용</label>
+                                <textarea
+                                    value={content}
+                                    onChange={(e) => setContent(e.target.value)}
+                                    placeholder="여기에 내용을 작성하세요..."
+                                    rows={12}
+                                    className="w-full px-4 py-3 bg-[#FBFBFA] border border-[#EBEBEB] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all resize-none"
+                                />
+                                <p className="text-xs text-[#A1A1A1] mt-1">💡 첫 번째 줄이 자동으로 제목으로 설정됩니다.</p>
+                            </div>
+
+                            {(activeCategory === 'idea' || activeCategory === 'memo') && (
+                                <div className={cn(
+                                    "space-y-4 p-4 rounded-xl border",
+                                    activeCategory === 'idea' ? "bg-amber-50/30 border-amber-100" : "bg-gray-50/30 border-gray-100"
+                                )}>
+                                    <h4 className={cn(
+                                        "text-xs font-bold uppercase tracking-wider",
+                                        activeCategory === 'idea' ? "text-amber-600" : "text-gray-600"
+                                    )}>첨부 자료 {activeCategory === 'idea' && "& 태그"}</h4>
+
+                                    {/* Material Status Selection - Only for 'idea' */}
+                                    {activeCategory === 'idea' && (
+                                        <div className="flex flex-col gap-3">
+                                            <div className="flex items-center gap-4">
+                                                <span className="text-xs text-[#787774] font-bold">상태:</span>
+                                                <div className="flex gap-2">
+                                                    {(['draft', 'finished'] as const).map((status) => (
+                                                        <button
+                                                            key={status}
+                                                            type="button"
+                                                            onClick={() => setMaterialStatus(status)}
+                                                            className={cn(
+                                                                "px-3 py-1 text-xs font-bold rounded-full border transition-all",
+                                                                materialStatus === status
+                                                                    ? "bg-[#37352F] text-white border-[#37352F]"
+                                                                    : "bg-white text-[#787774] border-[#EBEBEB] hover:bg-[#F9F9F8]"
+                                                            )}
+                                                        >
+                                                            {status === 'draft' ? '아이디어' : '완성본'}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            <div className="flex flex-col gap-2">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <span className="text-[11px] text-[#787774] font-bold mr-1">태그:</span>
+                                                    {storeMaterialTags.map(tag => (
+                                                        <div key={tag} className="group relative flex items-center">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setMaterialTags(prev =>
+                                                                        prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+                                                                    );
+                                                                }}
+                                                                className={cn(
+                                                                    "px-2 py-0.5 text-[10px] font-medium rounded-md border transition-all flex items-center gap-1",
+                                                                    materialTags.includes(tag)
+                                                                        ? "bg-blue-50 text-blue-600 border-blue-200"
+                                                                        : "bg-white text-[#A1A1A1] border-[#EBEBEB] hover:bg-[#F9F9F8]"
+                                                                )}
+                                                            >
+                                                                #{tag}
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    if (confirm(`'${tag}' 태그를 모든 게시물에서 삭제하시겠습니까?`)) {
+                                                                        deleteMaterialTag(tag);
+                                                                        setMaterialTags(prev => prev.filter(t => t !== tag));
+                                                                    }
+                                                                }}
+                                                                className="opacity-0 group-hover:opacity-100 absolute -top-1 -right-1 bg-white border border-[#EBEBEB] rounded-full p-0.5 text-[#A1A1A1] hover:text-red-500 hover:border-red-200 transition-all shadow-sm"
+                                                            >
+                                                                <X size={8} />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                    <div className="flex items-center ml-1 border-l border-[#EBEBEB] pl-2">
+                                                        <span className="text-[10px] text-[#A1A1A1] mr-1.5">+</span>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="태그 추가 (Enter)"
+                                                            className="w-24 px-1 py-0.5 text-[10px] bg-transparent border-b border-transparent focus:border-blue-300 focus:outline-none transition-all"
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter') {
+                                                                    e.preventDefault();
+                                                                    const val = e.currentTarget.value.trim();
+                                                                    if (val) {
+                                                                        addMaterialTag(val);
+                                                                        if (!materialTags.includes(val)) {
+                                                                            setMaterialTags(prev => [...prev, val]);
+                                                                        }
+                                                                        e.currentTarget.value = '';
+                                                                    }
+                                                                }
+                                                            }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Links */}
+                                    <div>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <label className="text-xs font-medium text-[#787774]">링크 URL</label>
+                                            <button
+                                                type="button"
+                                                onClick={addLinkField}
+                                                className={cn(
+                                                    "text-xs font-medium",
+                                                    activeCategory === 'idea' ? "text-amber-600 hover:text-amber-700" : "text-blue-600 hover:text-blue-700"
+                                                )}
+                                            >
+                                                + 링크 추가
+                                            </button>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {links.map((link, index) => (
+                                                <div key={index} className="flex gap-2">
+                                                    <input
+                                                        type="url"
+                                                        value={link}
+                                                        onChange={(e) => updateLink(index, e.target.value)}
+                                                        placeholder="https://example.com"
+                                                        className={cn(
+                                                            "flex-1 px-3 py-2 bg-white border border-[#EBEBEB] rounded text-sm focus:outline-none focus:ring-1",
+                                                            activeCategory === 'idea' ? "focus:ring-amber-500" : "focus:ring-blue-500"
+                                                        )}
+                                                    />
+                                                    {links.length > 1 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeLink(index)}
+                                                            className="p-2 text-rose-500 hover:bg-rose-50 rounded"
+                                                        >
+                                                            <X size={16} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Files */}
+                                    <div>
+                                        <label className="text-xs font-medium text-[#787774] mb-1 block">파일 업로드</label>
+                                        <input
+                                            type="file"
+                                            multiple
+                                            accept="image/*"
+                                            onChange={handleFileSelect}
+                                            className={cn(
+                                                "w-full px-3 py-2 bg-white border border-[#EBEBEB] rounded text-sm focus:outline-none focus:ring-1",
+                                                activeCategory === 'idea'
+                                                    ? "focus:ring-amber-500 file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100"
+                                                    : "focus:ring-blue-500 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100",
+                                                "file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold"
+                                            )}
+                                        />
+                                        {uploadedFiles.length > 0 && (
+                                            <div className="mt-2 space-y-1">
+                                                {uploadedFiles.map((file, index) => (
+                                                    <div key={index} className="flex items-center justify-between text-xs bg-white px-2 py-1 rounded border border-[#EBEBEB]">
+                                                        <span className="text-green-600">✓ {file.name}</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeFile(index)}
+                                                            className="text-rose-500 hover:text-rose-700"
+                                                        >
+                                                            <X size={14} />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            <button
+                                onClick={handleSubmit}
+                                className="w-full py-3 bg-[#37352F] text-white rounded-lg font-bold hover:bg-black transition-all shadow-md active:scale-[0.98]"
+                            >
+                                {editingPost ? '수정 완료' : '등록하기'}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div >
+        </div >
+    );
+}
+
+export default function JournalPage() {
+    return (
+        <Suspense fallback={<div className="p-20 text-center text-[#787774]">로딩 중...</div>}>
+            <JournalPageContent />
+        </Suspense>
+    );
+}
