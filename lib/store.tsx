@@ -222,9 +222,13 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
     };
 
     const addJournalPost = async (post: JournalPost) => {
-        const { data, error } = await supabase.from('journals').insert([post]).select().single();
+        const { id, ...postWithoutId } = post;
+        const { data, error } = await supabase.from('journals').insert([postWithoutId]).select().single();
         if (!error && data) {
             setJournalPosts(prev => [data as any, ...prev]);
+        } else if (error) {
+            console.error('Error adding post:', error.message);
+            alert('게시글 저장에 실패했습니다: ' + error.message);
         }
     };
 
