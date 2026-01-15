@@ -335,10 +335,10 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
         if (error) console.error('Error signing in:', error.message);
     };
 
-    // Simple ID-based login (internally uses email format for Supabase Auth)
+    // Simple ID-based login (internally uses gmail format to pass strict validation)
     const signInWithId = async (userId: string, memberNumber: string) => {
-        const cleanId = userId.trim().toLowerCase();
-        const internalEmail = `${cleanId}@math-reading.com`;
+        const cleanId = userId.trim().replace(/\s+/g, '').toLowerCase();
+        const internalEmail = `${cleanId}.math@gmail.com`;
         const { data, error } = await supabase.auth.signInWithPassword({
             email: internalEmail,
             password: memberNumber,
@@ -347,9 +347,9 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
     };
 
     const signUpWithId = async (userId: string, memberNumber: string, nickname: string) => {
-        const cleanId = userId.trim().toLowerCase();
+        const cleanId = userId.trim().replace(/\s+/g, '').toLowerCase();
         const cleanNickname = nickname.trim();
-        const internalEmail = `${cleanId}@math-reading.com`;
+        const internalEmail = `${cleanId}.math@gmail.com`;
 
         // 1. Sign up to Auth
         const { data, error: authError } = await supabase.auth.signUp({
