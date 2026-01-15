@@ -105,8 +105,16 @@ export default function ContentsPage() {
     };
 
     const handleUpload = () => {
+        const editorHtml = textareaRef.current?.innerHTML || '';
+        const editorText = textareaRef.current?.innerText || '';
+
         if (!title.trim()) {
             alert('제목을 입력해주세요.');
+            return;
+        }
+
+        if (!editorText.trim() && !editorHtml.includes('<img')) {
+            alert('상세 내용을 입력해주세요.');
             return;
         }
 
@@ -125,7 +133,7 @@ export default function ContentsPage() {
             updateJournalPost(editingPostId, {
                 book_id: selectedBook === 'none' ? undefined : selectedBook,
                 title: title,
-                content: content.trim() || '(내용 없음)',
+                content: editorHtml,
                 material_status: materialStatus,
                 material_tags: materialTags,
                 links: validLinks.length > 0 ? validLinks : undefined,
@@ -139,7 +147,7 @@ export default function ContentsPage() {
                 book_id: selectedBook === 'none' ? undefined : selectedBook,
                 category: 'idea',
                 title: title,
-                content: content.trim() || '(내용 없음)',
+                content: editorHtml,
                 material_status: materialStatus,
                 material_tags: materialTags,
                 links: validLinks.length > 0 ? validLinks : undefined,
@@ -222,7 +230,22 @@ export default function ContentsPage() {
                                             multiple
                                             accept="image/*"
                                             className="hidden"
-                                            onChange={handleImageSelect}
+                                            onChange={async (e) => {
+                                                const files = Array.from(e.target.files || []);
+                                                const editor = textareaRef.current;
+                                                if (!editor) return;
+                                                editor.focus();
+                                                for (const file of files) {
+                                                    const base64 = await new Promise<string>((resolve) => {
+                                                        const reader = new FileReader();
+                                                        reader.onloadend = () => resolve(reader.result as string);
+                                                        reader.readAsDataURL(file);
+                                                    });
+                                                    const imgHtml = `<p><img src="${base64}" alt="${file.name}" style="max-width: 100%; height: auto; border-radius: 8px; margin: 12px 0; border: 1px solid #F5E6D3;" /></p><p><br></p>`;
+                                                    document.execCommand('insertHTML', false, imgHtml);
+                                                }
+                                                e.target.value = '';
+                                            }}
                                         />
                                         <button
                                             type="button"
@@ -232,43 +255,33 @@ export default function ContentsPage() {
                                             <ImageIcon size={14} />
                                             이미지 추가
                                         </button>
-                                        <span className="text-[10px] text-[#8B8B7A]">
-                                            {uploadedImages.length > 0 && `${uploadedImages.length}개 이미지 추가됨`}
-                                        </span>
                                     </div>
 
-                                    {/* Image Previews */}
-                                    {uploadedImages.length > 0 && (
-                                        <div className="mb-2 p-3 bg-[#FFF9E6] border border-[#F5E6D3] rounded grid grid-cols-4 gap-2">
-                                            {uploadedImages.map((img, index) => (
-                                                <div key={index} className="relative group">
-                                                    <img
-                                                        src={img.preview}
-                                                        alt={img.file.name}
-                                                        className="w-full h-20 object-cover rounded border border-[#F5E6D3]"
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => removeImage(index)}
-                                                        className="absolute -top-1 -right-1 p-1 bg-rose-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
-                                                    >
-                                                        <X size={10} />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    <textarea
-                                        ref={textareaRef}
-                                        value={content}
-                                        onChange={(e) => setContent(e.target.value)}
-                                        placeholder="자료에 대한 상세 설명을 작성하세요&#10;&#10;위의 '이미지 추가' 버튼을 클릭하면 커서 위치에 이미지가 삽입됩니다."
-                                        rows={6}
-                                        className="w-full px-4 py-3 bg-[#FFFEF9] border border-[#F5E6D3] rounded-b-lg focus:outline-none focus:ring-2 focus:ring-[#FFD97D]/30 focus:border-[#FFD97D] transition-all text-sm font-medium resize-none"
+                                    {/* Rich Text Editor Area */}
+                                    <div
+                                        ref={textareaRef as any}
+                                        contentEditable
+                                        onInput={(e) => setContent(e.currentTarget.innerHTML)}
+                                        data-placeholder="자료에 대한 상세 설명을 작성하세요"
+                                        className="w-full min-h-[200px] px-4 py-4 bg-[#FFFEF9] border border-[#F5E6D3] rounded-b-lg focus:outline-none focus:ring-2 focus:ring-[#FFD97D]/30 focus:border-[#FFD97D] transition-all overflow-y-auto rich-editor"
+                                        style={{ outline: 'none' }}
+                                        dangerouslySetInnerHTML={editingPostId ? { __html: content } : undefined}
                                     />
+                                    <style jsx>{`
+                                        .rich-editor:empty:before {
+                                            content: attr(data-placeholder);
+                                            color: #8B8B7A;
+                                            cursor: text;
+                                        }
+                                        .rich-content img {
+                                            max-width: 100%;
+                                            height: auto;
+                                            border-radius: 8px;
+                                            margin: 12px 0;
+                                        }
+                                    `}</style>
                                     <p className="text-xs text-[#8B8B7A] mt-2">
-                                        💡 이미지는 커서 위치에 삽입되며, 텍스트와 자유롭게 섞어 쓸 수 있습니다.
+                                        💡 이미지를 글자처럼 취급하여 자유롭게 배치하고 설명과 함께 작성할 수 있습니다.
                                     </p>
                                 </div>
 
@@ -489,9 +502,10 @@ export default function ContentsPage() {
                                 )}
                             </div>
 
-                            <div className="prose max-w-none text-[#37352F] mb-10 whitespace-pre-wrap">
-                                {viewingPost.content}
-                            </div>
+                            <div
+                                className="prose max-w-none text-[#37352F] mb-10 rich-content"
+                                dangerouslySetInnerHTML={{ __html: viewingPost.content }}
+                            />
 
                             {/* Tags */}
                             <div className="flex flex-wrap gap-2 mb-8">

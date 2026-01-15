@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, Suspense } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, List, Type, HelpCircle, Heart, Lightbulb, Plus, Edit2, Trash2, Upload, Link as LinkIcon, Check, X, FileText, User, MessageSquare, BookOpen, Image as ImageIcon } from 'lucide-react';
+import { ChevronLeft, List, Type, HelpCircle, Heart, Lightbulb, Plus, Edit2, Trash2, Upload, Link as LinkIcon, Check, X, FileText, User, MessageSquare, BookOpen, Image as ImageIcon, Eye, EyeOff } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useReading, JournalPost } from '@/lib/store';
@@ -37,6 +37,7 @@ function JournalPageContent() {
     const [links, setLinks] = useState<string[]>(['']);
     const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
     const [uploadedImages, setUploadedImages] = useState<{ file: File; preview: string }[]>([]);
+    const editorRef = useRef<HTMLDivElement>(null);
 
     const currentPosts = journalPosts.filter(p => {
         const matchesCategory = activeCategory === 'all' || p.category === activeCategory;
@@ -58,48 +59,32 @@ function JournalPageContent() {
         setUploadedFiles(prev => prev.filter((_, i) => i !== index));
     };
 
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
-
     const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
         const imageFiles = files.filter(file => file.type.startsWith('image/'));
 
-        // Get cursor position
-        const textarea = textareaRef.current;
-        const cursorPos = textarea?.selectionStart || content.length;
+        const editor = editorRef.current;
+        if (!editor) return;
 
-        let newContent = content;
-        const newImages: { file: File; preview: string }[] = [];
+        editor.focus();
 
         for (const file of imageFiles) {
-            const preview = URL.createObjectURL(file);
-            newImages.push({ file, preview });
-
-            // Convert to base64 for inline insertion
             const base64 = await new Promise<string>((resolve) => {
                 const reader = new FileReader();
                 reader.onloadend = () => resolve(reader.result as string);
                 reader.readAsDataURL(file);
             });
 
-            // Insert image markdown at cursor position
-            const imageMarkdown = `\n![${file.name}](${base64})\n`;
-            newContent = newContent.slice(0, cursorPos) + imageMarkdown + newContent.slice(cursorPos);
+            // Insert image directly into HTML
+            const imgHtml = `<p><img src="${base64}" alt="${file.name}" style="max-width: 100%; height: auto; border-radius: 8px; margin: 12px 0; border: 1px solid #F5E6D3;" /></p><p><br></p>`;
+            document.execCommand('insertHTML', false, imgHtml);
         }
 
-        setContent(newContent);
-        setUploadedImages(prev => [...prev, ...newImages]);
-
-        // Reset file input
         e.target.value = '';
     };
 
     const removeImage = (index: number) => {
-        setUploadedImages(prev => {
-            // Revoke the object URL to free memory
-            URL.revokeObjectURL(prev[index].preview);
-            return prev.filter((_, i) => i !== index);
-        });
+        // Handled by contentEditable removal
     };
 
     const addLinkField = () => {
@@ -115,7 +100,10 @@ function JournalPageContent() {
     };
 
     const handleSubmit = async () => {
-        if (!content.trim()) {
+        const editorHtml = editorRef.current?.innerHTML || '';
+        const editorText = editorRef.current?.innerText || '';
+
+        if (!editorText.trim() && !editorHtml.includes('<img')) {
             alert('내용을 입력해주세요.');
             return;
         }
@@ -125,10 +113,10 @@ function JournalPageContent() {
             return;
         }
 
-        // Extract title from first line
-        const lines = content.split('\n');
-        const extractedTitle = lines[0].trim() || '제목 없음';
-        const extractedContent = lines.slice(1).join('\n').trim();
+        // Extract title from the first line of text
+        const textLines = editorText.split('\n').filter(l => l.trim() !== '');
+        const extractedTitle = textLines[0]?.trim() || '제목 없음';
+        const extractedContent = editorHtml; // Save full HTML to preserve images
 
         // Process files
         const fileData = uploadedFiles.map(file => ({
@@ -167,26 +155,35 @@ function JournalPageContent() {
         }
 
         // Reset form
+        if (editorRef.current) editorRef.current.innerHTML = '';
         setContent('');
         setLinks(['']);
         setMaterialStatus('draft');
         setFormMaterialTags([]);
         setUploadedFiles([]);
-        // Clean up image previews
-        uploadedImages.forEach(img => URL.revokeObjectURL(img.preview));
         setUploadedImages([]);
         setIsWriting(false);
+        setEditingPost(null);
     };
 
     const handleEdit = (post: JournalPost) => {
         setEditingPost(post.id);
-        setContent(post.title + '\n' + post.content);
+
+        // Populate editor with current content
+        // If content is not HTML (legacy), wrap it to look like HTML
+        const initialHtml = post.content.includes('<img') || post.content.includes('<p>')
+            ? post.content
+            : `<p><strong>${post.title}</strong></p><p>${post.content.replace(/\n/g, '<br>')}</p>`;
+
+        setContent(initialHtml);
+        if (editorRef.current) editorRef.current.innerHTML = initialHtml;
+
         setLinks(post.links && post.links.length > 0 ? post.links : ['']);
         if (post.category === 'idea') {
             setMaterialStatus(post.material_status || 'draft');
             setFormMaterialTags(post.material_tags || []);
         }
-        setFormMaterialTags(post.material_tags || []); // Also for memo if applicable
+        setFormMaterialTags(post.material_tags || []);
         setActiveUser(post.user_id);
         setIsWriting(true);
     };
@@ -496,27 +493,11 @@ function JournalPageContent() {
                                                 )}
                                             </div>
 
-                                            {/* Content with images */}
-                                            <div className="text-sm text-[#787774] mb-3">
-                                                {post.content.split(/!\[([^\]]*)\]\(([^)]+)\)/).map((part, idx) => {
-                                                    // Every third element starting from index 2 is an image URL
-                                                    if (idx % 3 === 2) {
-                                                        const altText = post.content.split(/!\[([^\]]*)\]\(([^)]+)\)/)[idx - 1];
-                                                        return (
-                                                            <img
-                                                                key={idx}
-                                                                src={part}
-                                                                alt={altText || '이미지'}
-                                                                className="max-w-full h-auto rounded-lg border border-[#EBEBEB] my-3"
-                                                            />
-                                                        );
-                                                    } else if (idx % 3 === 0) {
-                                                        // Regular text
-                                                        return part ? <div key={idx} className="whitespace-pre-wrap">{part}</div> : null;
-                                                    }
-                                                    return null;
-                                                })}
-                                            </div>
+                                            {/* HTML Content (Rich Text) */}
+                                            <div
+                                                className="text-sm text-[#4A4A3A] mb-3 rich-content"
+                                                dangerouslySetInnerHTML={{ __html: post.content }}
+                                            />
 
                                             {((post.links && post.links.length > 0) || (post.files && post.files.length > 0)) && (
                                                 <div className="flex flex-wrap gap-2 pt-3 border-t border-[#EBEBEB]">
@@ -641,249 +622,241 @@ function JournalPageContent() {
                                 <label className="block text-sm font-bold text-[#37352F] mb-2">내용</label>
 
                                 {/* Editor Toolbar */}
-                                <div className="flex items-center gap-2 mb-2 p-2 bg-[#FFFCF5] border border-[#F5E6D3] rounded-t-lg">
-                                    <input
-                                        type="file"
-                                        id="inline-image-upload"
-                                        multiple
-                                        accept="image/*"
-                                        className="hidden"
-                                        onChange={handleImageSelect}
+                                <div className="flex items-center justify-between gap-2 mb-2 p-2 bg-[#FFFCF5] border border-[#F5E6D3] rounded-t-lg">
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="file"
+                                            id="inline-image-upload"
+                                            multiple
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={handleImageSelect}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => document.getElementById('inline-image-upload')?.click()}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-[#FFD97D] to-[#FFB84D] text-white rounded text-xs font-bold hover:shadow-md transition-all"
+                                        >
+                                            <ImageIcon size={14} />
+                                            이미지 추가
+                                        </button>
+                                        <span className="text-[10px] text-[#8B8B7A]">
+                                            {uploadedImages.length > 0 && `${uploadedImages.length}개 이미지 추가됨`}
+                                        </span>
+                                    </div>
+                                    {/* Rich Text Editor Area */}
+                                    <div
+                                        ref={editorRef}
+                                        contentEditable
+                                        onInput={(e) => setContent(e.currentTarget.innerHTML)}
+                                        data-placeholder="여기에 내용을 작성하세요... 첫 번째 줄이 제목이 됩니다."
+                                        className="w-full min-h-[400px] px-4 py-4 bg-[#FFFEF9] border border-[#F5E6D3] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FFD97D]/30 focus:border-[#FFD97D] transition-all overflow-y-auto rich-editor"
+                                        style={{ outline: 'none' }}
                                     />
-                                    <button
-                                        type="button"
-                                        onClick={() => document.getElementById('inline-image-upload')?.click()}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-[#FFD97D] to-[#FFB84D] text-white rounded text-xs font-bold hover:shadow-md transition-all"
-                                    >
-                                        <ImageIcon size={14} />
-                                        이미지 추가
-                                    </button>
-                                    <span className="text-[10px] text-[#8B8B7A]">
-                                        {uploadedImages.length > 0 && `${uploadedImages.length}개 이미지 추가됨`}
-                                    </span>
+                                    <style jsx>{`
+                                    .rich-editor:empty:before {
+                                        content: attr(data-placeholder);
+                                        color: #8B8B7A;
+                                        cursor: text;
+                                    }
+                                    .rich-content img {
+                                        max-width: 100%;
+                                        height: auto;
+                                        border-radius: 8px;
+                                        margin: 12px 0;
+                                    }
+                                `}</style>
+                                    <p className="text-xs text-[#8B8B7A] mt-2">
+                                        💡 첫 번째 줄은 자동으로 제목으로 인식됩니다. 이미지와 글을 자유롭게 배치하세요.
+                                    </p>
                                 </div>
 
-                                {/* Image Previews */}
-                                {uploadedImages.length > 0 && (
-                                    <div className="mb-2 p-3 bg-[#FFF9E6] border border-[#F5E6D3] rounded grid grid-cols-4 gap-2">
-                                        {uploadedImages.map((img, index) => (
-                                            <div key={index} className="relative group">
-                                                <img
-                                                    src={img.preview}
-                                                    alt={img.file.name}
-                                                    className="w-full h-20 object-cover rounded border border-[#F5E6D3]"
-                                                />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removeImage(index)}
-                                                    className="absolute -top-1 -right-1 p-1 bg-rose-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
-                                                >
-                                                    <X size={10} />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
+                                {(activeCategory === 'idea' || activeCategory === 'memo') && (
+                                    <div className={cn(
+                                        "space-y-4 p-4 rounded-xl border",
+                                        activeCategory === 'idea' ? "bg-amber-50/30 border-amber-100" : "bg-gray-50/30 border-gray-100"
+                                    )}>
+                                        <h4 className={cn(
+                                            "text-xs font-bold uppercase tracking-wider",
+                                            activeCategory === 'idea' ? "text-amber-600" : "text-gray-600"
+                                        )}>첨부 자료 {activeCategory === 'idea' && "& 태그"}</h4>
 
-                                {/* Text Area */}
-                                <textarea
-                                    ref={textareaRef}
-                                    value={content}
-                                    onChange={(e) => setContent(e.target.value)}
-                                    placeholder="여기에 내용을 작성하세요...&#10;&#10;위의 '이미지 추가' 버튼을 클릭하면 커서 위치에 이미지가 삽입됩니다."
-                                    rows={12}
-                                    className="w-full px-4 py-3 bg-[#FFFEF9] border border-[#F5E6D3] rounded-b-lg focus:outline-none focus:ring-2 focus:ring-[#FFD97D]/30 focus:border-[#FFD97D] transition-all resize-none"
-                                />
-                                <p className="text-xs text-[#8B8B7A] mt-2">
-                                    💡 첫 번째 줄이 자동으로 제목으로 설정됩니다. 이미지는 커서 위치에 삽입되며, 텍스트와 자유롭게 섞어 쓸 수 있습니다.
-                                </p>
-                            </div>
-
-                            {(activeCategory === 'idea' || activeCategory === 'memo') && (
-                                <div className={cn(
-                                    "space-y-4 p-4 rounded-xl border",
-                                    activeCategory === 'idea' ? "bg-amber-50/30 border-amber-100" : "bg-gray-50/30 border-gray-100"
-                                )}>
-                                    <h4 className={cn(
-                                        "text-xs font-bold uppercase tracking-wider",
-                                        activeCategory === 'idea' ? "text-amber-600" : "text-gray-600"
-                                    )}>첨부 자료 {activeCategory === 'idea' && "& 태그"}</h4>
-
-                                    {/* Material Status Selection - Only for 'idea' */}
-                                    {activeCategory === 'idea' && (
-                                        <div className="flex flex-col gap-3">
-                                            <div className="flex items-center gap-4">
-                                                <span className="text-xs text-[#787774] font-bold">상태:</span>
-                                                <div className="flex gap-2">
-                                                    {(['draft', 'finished'] as const).map((status) => (
-                                                        <button
-                                                            key={status}
-                                                            type="button"
-                                                            onClick={() => setMaterialStatus(status)}
-                                                            className={cn(
-                                                                "px-3 py-1 text-xs font-bold rounded-full border transition-all",
-                                                                materialStatus === status
-                                                                    ? "bg-[#37352F] text-white border-[#37352F]"
-                                                                    : "bg-white text-[#787774] border-[#EBEBEB] hover:bg-[#F9F9F8]"
-                                                            )}
-                                                        >
-                                                            {status === 'draft' ? '아이디어' : '완성본'}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-
-                                            <div className="flex flex-col gap-2">
-                                                <div className="flex flex-wrap items-center gap-2">
-                                                    <span className="text-[11px] text-[#787774] font-bold mr-1">태그:</span>
-                                                    {materialTags.map(tag => (
-                                                        <div key={tag} className="group relative flex items-center">
+                                        {/* Material Status Selection - Only for 'idea' */}
+                                        {activeCategory === 'idea' && (
+                                            <div className="flex flex-col gap-3">
+                                                <div className="flex items-center gap-4">
+                                                    <span className="text-xs text-[#787774] font-bold">상태:</span>
+                                                    <div className="flex gap-2">
+                                                        {(['draft', 'finished'] as const).map((status) => (
                                                             <button
+                                                                key={status}
                                                                 type="button"
-                                                                onClick={() => {
-                                                                    setFormMaterialTags(prev =>
-                                                                        prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
-                                                                    );
-                                                                }}
+                                                                onClick={() => setMaterialStatus(status)}
                                                                 className={cn(
-                                                                    "px-2 py-0.5 text-[10px] font-medium rounded-md border transition-all flex items-center gap-1",
-                                                                    formMaterialTags.includes(tag)
-                                                                        ? "bg-blue-50 text-blue-600 border-blue-200"
-                                                                        : "bg-white text-[#A1A1A1] border-[#EBEBEB] hover:bg-[#F9F9F8]"
+                                                                    "px-3 py-1 text-xs font-bold rounded-full border transition-all",
+                                                                    materialStatus === status
+                                                                        ? "bg-[#37352F] text-white border-[#37352F]"
+                                                                        : "bg-white text-[#787774] border-[#EBEBEB] hover:bg-[#F9F9F8]"
                                                                 )}
                                                             >
-                                                                #{tag}
+                                                                {status === 'draft' ? '아이디어' : '완성본'}
                                                             </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    if (confirm(`'${tag}' 태그를 모든 게시물에서 삭제하시겠습니까?`)) {
-                                                                        deleteMaterialTag(tag);
-                                                                        setFormMaterialTags(prev => prev.filter(t => t !== tag));
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex flex-col gap-2">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <span className="text-[11px] text-[#787774] font-bold mr-1">태그:</span>
+                                                        {materialTags.map(tag => (
+                                                            <div key={tag} className="group relative flex items-center">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setFormMaterialTags(prev =>
+                                                                            prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+                                                                        );
+                                                                    }}
+                                                                    className={cn(
+                                                                        "px-2 py-0.5 text-[10px] font-medium rounded-md border transition-all flex items-center gap-1",
+                                                                        formMaterialTags.includes(tag)
+                                                                            ? "bg-blue-50 text-blue-600 border-blue-200"
+                                                                            : "bg-white text-[#A1A1A1] border-[#EBEBEB] hover:bg-[#F9F9F8]"
+                                                                    )}
+                                                                >
+                                                                    #{tag}
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        if (confirm(`'${tag}' 태그를 모든 게시물에서 삭제하시겠습니까?`)) {
+                                                                            deleteMaterialTag(tag);
+                                                                            setFormMaterialTags(prev => prev.filter(t => t !== tag));
+                                                                        }
+                                                                    }}
+                                                                    className="opacity-0 group-hover:opacity-100 absolute -top-1 -right-1 bg-white border border-[#EBEBEB] rounded-full p-0.5 text-[#A1A1A1] hover:text-red-500 hover:border-red-200 transition-all shadow-sm"
+                                                                >
+                                                                    <X size={8} />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                        <div className="flex items-center ml-1 border-l border-[#EBEBEB] pl-2">
+                                                            <span className="text-[10px] text-[#A1A1A1] mr-1.5">+</span>
+                                                            <input
+                                                                type="text"
+                                                                placeholder="태그 추가 (Enter)"
+                                                                className="w-24 px-1 py-0.5 text-[10px] bg-transparent border-b border-transparent focus:border-blue-300 focus:outline-none transition-all"
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter') {
+                                                                        e.preventDefault();
+                                                                        const val = e.currentTarget.value.trim();
+                                                                        if (val) {
+                                                                            addMaterialTag(val);
+                                                                            if (!formMaterialTags.includes(val)) {
+                                                                                setFormMaterialTags(prev => [...prev, val]);
+                                                                            }
+                                                                            e.currentTarget.value = '';
+                                                                        }
                                                                     }
                                                                 }}
-                                                                className="opacity-0 group-hover:opacity-100 absolute -top-1 -right-1 bg-white border border-[#EBEBEB] rounded-full p-0.5 text-[#A1A1A1] hover:text-red-500 hover:border-red-200 transition-all shadow-sm"
-                                                            >
-                                                                <X size={8} />
-                                                            </button>
+                                                            />
                                                         </div>
-                                                    ))}
-                                                    <div className="flex items-center ml-1 border-l border-[#EBEBEB] pl-2">
-                                                        <span className="text-[10px] text-[#A1A1A1] mr-1.5">+</span>
-                                                        <input
-                                                            type="text"
-                                                            placeholder="태그 추가 (Enter)"
-                                                            className="w-24 px-1 py-0.5 text-[10px] bg-transparent border-b border-transparent focus:border-blue-300 focus:outline-none transition-all"
-                                                            onKeyDown={(e) => {
-                                                                if (e.key === 'Enter') {
-                                                                    e.preventDefault();
-                                                                    const val = e.currentTarget.value.trim();
-                                                                    if (val) {
-                                                                        addMaterialTag(val);
-                                                                        if (!formMaterialTags.includes(val)) {
-                                                                            setFormMaterialTags(prev => [...prev, val]);
-                                                                        }
-                                                                        e.currentTarget.value = '';
-                                                                    }
-                                                                }
-                                                            }}
-                                                        />
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    )}
+                                        )}
 
-                                    {/* Links */}
-                                    <div>
-                                        <div className="flex items-center justify-between mb-2">
-                                            <label className="text-xs font-medium text-[#787774]">링크 URL</label>
-                                            <button
-                                                type="button"
-                                                onClick={addLinkField}
-                                                className={cn(
-                                                    "text-xs font-medium",
-                                                    activeCategory === 'idea' ? "text-amber-600 hover:text-amber-700" : "text-blue-600 hover:text-blue-700"
-                                                )}
-                                            >
-                                                + 링크 추가
-                                            </button>
-                                        </div>
-                                        <div className="space-y-2">
-                                            {links.map((link, index) => (
-                                                <div key={index} className="flex gap-2">
-                                                    <input
-                                                        type="url"
-                                                        value={link}
-                                                        onChange={(e) => updateLink(index, e.target.value)}
-                                                        placeholder="https://example.com"
-                                                        className={cn(
-                                                            "flex-1 px-3 py-2 bg-white border border-[#EBEBEB] rounded text-sm focus:outline-none focus:ring-1",
-                                                            activeCategory === 'idea' ? "focus:ring-amber-500" : "focus:ring-blue-500"
-                                                        )}
-                                                    />
-                                                    {links.length > 1 && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => removeLink(index)}
-                                                            className="p-2 text-rose-500 hover:bg-rose-50 rounded"
-                                                        >
-                                                            <X size={16} />
-                                                        </button>
+                                        {/* Links */}
+                                        <div>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <label className="text-xs font-medium text-[#787774]">링크 URL</label>
+                                                <button
+                                                    type="button"
+                                                    onClick={addLinkField}
+                                                    className={cn(
+                                                        "text-xs font-medium",
+                                                        activeCategory === 'idea' ? "text-amber-600 hover:text-amber-700" : "text-blue-600 hover:text-blue-700"
                                                     )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-
-                                    {/* Files */}
-                                    <div>
-                                        <label className="text-xs font-medium text-[#787774] mb-1 block">파일 업로드</label>
-                                        <input
-                                            type="file"
-                                            multiple
-                                            accept="image/*"
-                                            onChange={handleFileSelect}
-                                            className={cn(
-                                                "w-full px-3 py-2 bg-white border border-[#EBEBEB] rounded text-sm focus:outline-none focus:ring-1",
-                                                activeCategory === 'idea'
-                                                    ? "focus:ring-amber-500 file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100"
-                                                    : "focus:ring-blue-500 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100",
-                                                "file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold"
-                                            )}
-                                        />
-                                        {uploadedFiles.length > 0 && (
-                                            <div className="mt-2 space-y-1">
-                                                {uploadedFiles.map((file, index) => (
-                                                    <div key={index} className="flex items-center justify-between text-xs bg-white px-2 py-1 rounded border border-[#EBEBEB]">
-                                                        <span className="text-green-600">✓ {file.name}</span>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => removeFile(index)}
-                                                            className="text-rose-500 hover:text-rose-700"
-                                                        >
-                                                            <X size={14} />
-                                                        </button>
+                                                >
+                                                    + 링크 추가
+                                                </button>
+                                            </div>
+                                            <div className="space-y-2">
+                                                {links.map((link, index) => (
+                                                    <div key={index} className="flex gap-2">
+                                                        <input
+                                                            type="url"
+                                                            value={link}
+                                                            onChange={(e) => updateLink(index, e.target.value)}
+                                                            placeholder="https://example.com"
+                                                            className={cn(
+                                                                "flex-1 px-3 py-2 bg-white border border-[#EBEBEB] rounded text-sm focus:outline-none focus:ring-1",
+                                                                activeCategory === 'idea' ? "focus:ring-amber-500" : "focus:ring-blue-500"
+                                                            )}
+                                                        />
+                                                        {links.length > 1 && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => removeLink(index)}
+                                                                className="p-2 text-rose-500 hover:bg-rose-50 rounded"
+                                                            >
+                                                                <X size={16} />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
+                                        </div>
 
-                            <button
-                                onClick={handleSubmit}
-                                className="w-full py-3 bg-[#37352F] text-white rounded-lg font-bold hover:bg-black transition-all shadow-md active:scale-[0.98]"
-                            >
-                                {editingPost ? '수정 완료' : '등록하기'}
-                            </button>
+                                        {/* Files */}
+                                        <div>
+                                            <label className="text-xs font-medium text-[#787774] mb-1 block">파일 업로드</label>
+                                            <input
+                                                type="file"
+                                                multiple
+                                                accept="image/*"
+                                                onChange={handleFileSelect}
+                                                className={cn(
+                                                    "w-full px-3 py-2 bg-white border border-[#EBEBEB] rounded text-sm focus:outline-none focus:ring-1",
+                                                    activeCategory === 'idea'
+                                                        ? "focus:ring-amber-500 file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100"
+                                                        : "focus:ring-blue-500 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100",
+                                                    "file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-semibold"
+                                                )}
+                                            />
+                                            {uploadedFiles.length > 0 && (
+                                                <div className="mt-2 space-y-1">
+                                                    {uploadedFiles.map((file, index) => (
+                                                        <div key={index} className="flex items-center justify-between text-xs bg-white px-2 py-1 rounded border border-[#EBEBEB]">
+                                                            <span className="text-green-600">✓ {file.name}</span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => removeFile(index)}
+                                                                className="text-rose-500 hover:text-rose-700"
+                                                            >
+                                                                <X size={14} />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                <button
+                                    onClick={handleSubmit}
+                                    className="w-full py-3 bg-[#37352F] text-white rounded-lg font-bold hover:bg-black transition-all shadow-md active:scale-[0.98] mt-6"
+                                >
+                                    {editingPost ? '수정 완료' : '등록하기'}
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>
-            </div >
-        </div >
+            </div>
+        </div>
     );
 }
 
