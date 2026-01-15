@@ -197,9 +197,9 @@ export default function ContentsPage() {
 
             {/* Upload/Edit Modal */}
             {isUploading && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl w-full max-w-xl max-h-[90vh] overflow-y-auto shadow-2xl">
-                        <div className="p-8">
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[95vh] overflow-y-auto shadow-2xl">
+                        <div className="p-10">
                             <div className="flex items-center justify-between mb-8">
                                 <h2 className="text-2xl font-bold text-[#37352F]">{editingPostId ? '자료 수정' : '수업 자료 업로드'}</h2>
                                 <button onClick={resetForm} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -250,10 +250,10 @@ export default function ContentsPage() {
                                         <button
                                             type="button"
                                             onClick={() => document.getElementById('contents-image-upload')?.click()}
-                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-[#FFD97D] to-[#FFB84D] text-white rounded text-xs font-bold hover:shadow-md transition-all"
+                                            className="p-2 bg-white border border-[#F5E6D3] text-[#FFB84D] rounded-lg hover:bg-[#FFFCF5] hover:border-[#FFD97D] transition-all shadow-sm"
+                                            title="이미지 추가"
                                         >
-                                            <ImageIcon size={14} />
-                                            이미지 추가
+                                            <ImageIcon size={18} />
                                         </button>
                                     </div>
 
@@ -262,27 +262,25 @@ export default function ContentsPage() {
                                         ref={textareaRef as any}
                                         contentEditable
                                         onInput={(e) => setContent(e.currentTarget.innerHTML)}
-                                        data-placeholder="자료에 대한 상세 설명을 작성하세요"
-                                        className="w-full min-h-[200px] px-4 py-4 bg-[#FFFEF9] border border-[#F5E6D3] rounded-b-lg focus:outline-none focus:ring-2 focus:ring-[#FFD97D]/30 focus:border-[#FFD97D] transition-all overflow-y-auto rich-editor"
+                                        data-placeholder="내용을 자유롭게 입력하세요..."
+                                        className="w-full min-h-[450px] px-6 py-8 bg-white border border-[#F5E6D3] rounded-b-lg focus:outline-none transition-all overflow-y-auto rich-editor text-lg leading-relaxed shadow-inner"
                                         style={{ outline: 'none' }}
                                         dangerouslySetInnerHTML={editingPostId ? { __html: content } : undefined}
                                     />
                                     <style jsx>{`
                                         .rich-editor:empty:before {
                                             content: attr(data-placeholder);
-                                            color: #8B8B7A;
+                                            color: #A1A1A1;
                                             cursor: text;
                                         }
-                                        .rich-content img {
+                                        .rich-content img, .rich-editor img {
                                             max-width: 100%;
                                             height: auto;
-                                            border-radius: 8px;
-                                            margin: 12px 0;
+                                            border-radius: 12px;
+                                            margin: 20px 0;
+                                            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
                                         }
                                     `}</style>
-                                    <p className="text-xs text-[#8B8B7A] mt-2">
-                                        💡 이미지를 글자처럼 취급하여 자유롭게 배치하고 설명과 함께 작성할 수 있습니다.
-                                    </p>
                                 </div>
 
                                 <div>
