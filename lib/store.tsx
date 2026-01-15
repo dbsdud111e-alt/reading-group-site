@@ -73,74 +73,89 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
     const [books, setBooks] = useState<Partial<Book>[]>([]);
     const [schedules, setSchedules] = useState<Schedule[]>([]);
     const [journalPosts, setJournalPosts] = useState<JournalPost[]>([]);
-    const [users, setUsers] = useState<User[]>([
-        { id: 'user1', name: '상민' },
-        { id: 'user2', name: '윤영' }
-    ]);
     const [materialTags, setMaterialTags] = useState<string[]>(['공통수학', '미적분', '기하', '활동지', '발표자료', '도구']);
     const [globalFilterTags, setGlobalFilterTags] = useState<string[]>([]);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        const loadInitialData = async () => {
-            setIsLoading(true);
-            try {
-                // Fetch Books
-                const { data: dbBooks } = await supabase.from('books').select('*').order('created_at', { ascending: false });
-                if (dbBooks) setBooks(dbBooks);
+    const loadInitialData = async () => {
+        try {
+            // Fetch Books
+            const { data: dbBooks } = await supabase.from('books').select('*').order('created_at', { ascending: false });
+            if (dbBooks) setBooks(dbBooks);
 
-                // Fetch Schedules
-                const { data: dbSchedules } = await supabase.from('schedules').select('*');
-                if (dbSchedules) setSchedules(dbSchedules);
+            // Fetch Schedules
+            const { data: dbSchedules } = await supabase.from('schedules').select('*');
+            if (dbSchedules) setSchedules(dbSchedules);
 
-                // Fetch Journal Posts with Comments
-                const { data: dbPosts } = await supabase
-                    .from('journals')
-                    .select('*, comments(*)')
-                    .order('created_at', { ascending: false });
-                if (dbPosts) setJournalPosts(dbPosts as any);
+            // Fetch Journal Posts with Comments
+            const { data: dbPosts } = await supabase
+                .from('journals')
+                .select('*, comments(*)')
+                .order('created_at', { ascending: false });
+            if (dbPosts) setJournalPosts(dbPosts as any);
 
-                // Fetch Registered Users
-                const { data: dbUsers } = await supabase.from('users').select('*');
-                if (dbUsers) {
-                    setUsers(dbUsers.map(u => ({
-                        id: u.id,
-                        name: u.display_name || '익명',
-                        avatar_url: u.avatar_url
-                    })));
-                }
-            } catch (err) {
-                console.error('Initial fetch failed:', err);
-            } finally {
-                setIsLoading(false);
+            // Fetch Registered Users
+            const { data: dbUsers } = await supabase.from('users').select('*');
+            if (dbUsers) {
+                setUsers(dbUsers.map(u => ({
+                    id: u.id,
+                    name: u.display_name || '익명',
+                    avatar_url: u.avatar_url,
+                    email: u.email
+                })));
             }
-        };
+        } catch (err) {
+            console.error('Initial fetch failed:', err);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
+    const fetchProfile = async (supabaseUser: SupabaseUser) => {
+        try {
+            const { data, error } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', supabaseUser.id)
+                .single();
+
+            if (data) {
+                setCurrentUser({
+                    id: data.id,
+                    name: data.display_name || supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || '',
+                    avatar_url: data.avatar_url || supabaseUser.user_metadata?.avatar_url,
+                    email: supabaseUser.email
+                });
+            } else {
+                setCurrentUser({
+                    id: supabaseUser.id,
+                    name: supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || '',
+                    avatar_url: supabaseUser.user_metadata?.avatar_url,
+                    email: supabaseUser.email
+                });
+            }
+        } catch (err) {
+            console.error('Error fetching profile:', err);
+        }
+    };
+
+    useEffect(() => {
         loadInitialData();
 
         // Check active session
         supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session) {
-                fetchProfile(session.user);
-            }
+            if (session) fetchProfile(session.user);
         });
 
         // REALTIME SUBSCRIPTIONS
         const journalsChannel = supabase
-            .channel('journals_realtime')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'journals' }, () => {
-                loadInitialData(); // Re-fetch on any journal change
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => {
-                loadInitialData();
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'books' }, () => {
-                loadInitialData();
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, () => {
-                loadInitialData();
-            })
+            .channel('db_realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'journals' }, () => loadInitialData())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => loadInitialData())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'books' }, () => loadInitialData())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, () => loadInitialData())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => loadInitialData())
             .subscribe();
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
@@ -157,38 +172,6 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
             supabase.removeChannel(journalsChannel);
         };
     }, []);
-
-    const fetchProfile = async (supabaseUser: SupabaseUser) => {
-        setIsLoading(true);
-        try {
-            const { data, error } = await supabase
-                .from('users')
-                .select('*')
-                .eq('id', supabaseUser.id)
-                .single();
-
-            if (data) {
-                setCurrentUser({
-                    id: data.id,
-                    name: data.display_name || supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || '',
-                    avatar_url: data.avatar_url || supabaseUser.user_metadata?.avatar_url,
-                    email: supabaseUser.email
-                });
-            } else {
-                // Initial login, profile doesn't exist yet
-                setCurrentUser({
-                    id: supabaseUser.id,
-                    name: supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || '',
-                    avatar_url: supabaseUser.user_metadata?.avatar_url,
-                    email: supabaseUser.email
-                });
-            }
-        } catch (err) {
-            console.error('Error fetching profile:', err);
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
     useEffect(() => {
         localStorage.setItem('math-material-tags', JSON.stringify(materialTags));

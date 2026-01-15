@@ -41,12 +41,11 @@ function JournalPageContent() {
         const matchesCategory = p.category === activeCategory;
         const matchesUser = activeUser === 'all' || p.user_id === activeUser;
         const matchesBook = activeBook === 'all' || p.book_id === activeBook;
-        const bookExists = books.some(b => b.id === p.book_id);
 
-        // Tag filtering: Only apply for categories that have tags or if tags are selected
+        // Tag filtering
         const matchesTags = globalFilterTags.length === 0 || (p.material_tags && globalFilterTags.every(tag => p.material_tags!.includes(tag)));
 
-        return matchesCategory && matchesUser && matchesBook && bookExists && matchesTags;
+        return matchesCategory && matchesUser && matchesBook && matchesTags;
     }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -234,19 +233,6 @@ function JournalPageContent() {
                         ))}
                     </div>
 
-                    {/* Settings Button */}
-                    <button
-                        onClick={() => setEditingUserName(editingUserName ? null : 'settings')}
-                        className={cn(
-                            "flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors",
-                            editingUserName === 'settings'
-                                ? "bg-blue-500 text-white"
-                                : "text-[#787774] hover:bg-[#F1F1F0]"
-                        )}
-                    >
-                        <Edit2 size={14} />
-                        이름 관리
-                    </button>
                 </div>
 
                 {/* User Management Panel */}

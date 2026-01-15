@@ -10,15 +10,14 @@ import { cn } from '@/lib/utils';
 export default function DashboardPage() {
   const { journalPosts, books, schedules, users, currentUser } = useReading();
 
-  // Get most recent posts (only for existing books)
+  // Get most recent posts (all shared posts)
   const recentPosts = [...journalPosts]
-    .filter(post => books.some(book => book.id === post.book_id))
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 4);
 
-  // Get upcoming schedules (only for existing books)
+  // Get upcoming schedules
   const upcomingSchedules = [...schedules]
-    .filter(s => books.some(book => book.id === s.book_id) && new Date(s.end_date) >= new Date())
+    .filter(s => new Date(s.end_date) >= new Date())
     .sort((a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime())
     .slice(0, 2);
 
