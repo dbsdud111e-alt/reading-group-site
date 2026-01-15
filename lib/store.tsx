@@ -94,8 +94,11 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
                 const { data: dbSchedules } = await supabase.from('schedules').select('*');
                 if (dbSchedules) setSchedules(dbSchedules);
 
-                // Fetch Journal Posts
-                const { data: dbPosts } = await supabase.from('journals').select('*').order('created_at', { ascending: false });
+                // Fetch Journal Posts with Comments
+                const { data: dbPosts } = await supabase
+                    .from('journals')
+                    .select('*, comments(*)')
+                    .order('created_at', { ascending: false });
                 if (dbPosts) setJournalPosts(dbPosts as any);
 
                 // Fetch Registered Users
@@ -123,9 +126,10 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
             }
         });
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
             if (session) {
-                fetchProfile(session.user);
+                await fetchProfile(session.user);
+                loadInitialData(); // Refresh data when login state changes
             } else {
                 setCurrentUser(null);
             }
