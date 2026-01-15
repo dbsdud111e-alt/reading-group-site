@@ -12,7 +12,8 @@ import {
     ChevronLeft,
     ChevronRight,
     Plus,
-    Search
+    Search,
+    Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReading } from '@/lib/store';
@@ -23,6 +24,7 @@ const navItems = [
     { name: '서재', href: '/books', icon: BookOpen },
     { name: '캘린더', href: '/calendar', icon: Calendar },
     { name: '수업 자료', href: '/contents', icon: Layers },
+    { name: '관리자', href: '/admin', icon: Shield, adminOnly: true },
 ];
 
 export function Sidebar() {
@@ -30,7 +32,10 @@ export function Sidebar() {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const pathname = usePathname();
-    const { books, journalPosts } = useReading();
+    const { books, journalPosts, currentUser } = useReading();
+
+    // Check if current user is admin
+    const isAdmin = currentUser?.email === 'admin@math-reading.com' || currentUser?.id === 'admin';
 
     const filteredBooks = books.filter(b =>
         b.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -41,6 +46,9 @@ export function Sidebar() {
         p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.content.toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    // Filter nav items based on admin status
+    const visibleNavItems = navItems.filter(item => !item.adminOnly || isAdmin);
 
     return (
         <>
@@ -78,13 +86,13 @@ export function Sidebar() {
                         )}
                     >
                         <Search size={18} />
-                        {!collapsed && <span className="text-sm">검색</span>}
+                        {!collapsed && <span className="text-sm">검색...</span>}
                     </button>
                 </div>
 
                 {/* Navigation */}
                 <nav className="flex-1 px-2 space-y-0.5">
-                    {navItems.map((item) => {
+                    {visibleNavItems.map((item) => {
                         const isActive = pathname === item.href;
                         return (
                             <Link
