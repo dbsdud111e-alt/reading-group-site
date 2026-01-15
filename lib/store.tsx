@@ -63,8 +63,8 @@ interface ReadingContextType {
     currentUser: User | null;
     isLoading: boolean;
     signInWithGoogle: () => Promise<void>;
-    signInWithEmail: (email: string, password: string) => Promise<{ error: any }>;
-    signUpWithEmail: (email: string, password: string) => Promise<{ error: any }>;
+    signInWithId: (userId: string, memberNumber: string) => Promise<{ error: any }>;
+    signUpWithId: (userId: string, memberNumber: string, nickname: string) => Promise<{ error: any }>;
     signOut: () => Promise<void>;
     updateProfile: (updates: { name: string }) => Promise<void>;
 }
@@ -334,20 +334,43 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
         if (error) console.error('Error signing in:', error.message);
     };
 
-    const signInWithEmail = async (email: string, password: string) => {
+    // Simple ID-based login (internally uses email format for Supabase Auth)
+    const signInWithId = async (userId: string, memberNumber: string) => {
+        const internalEmail = `${userId}@math-reading.group`;
         const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
+            email: internalEmail,
+            password: memberNumber,
         });
         return { error };
     };
 
-    const signUpWithEmail = async (email: string, password: string) => {
-        const { data, error } = await supabase.auth.signUp({
-            email,
-            password,
+    const signUpWithId = async (userId: string, memberNumber: string, nickname: string) => {
+        const internalEmail = `${userId}@math-reading.group`;
+
+        // 1. Sign up to Auth
+        const { data, error: authError } = await supabase.auth.signUp({
+            email: internalEmail,
+            password: memberNumber,
+            options: {
+                data: {
+                    full_name: nickname
+                }
+            }
         });
-        return { error };
+
+        if (authError) return { error: authError };
+
+        // 2. Create profile in users table
+        if (data.user) {
+            const { error: profileError } = await supabase.from('users').upsert({
+                id: data.user.id,
+                display_name: nickname,
+                updated_at: new Date().toISOString()
+            });
+            if (profileError) console.error('Profile creation error:', profileError.message);
+        }
+
+        return { error: null };
     };
 
     const signOut = async () => {
@@ -400,8 +423,8 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
             currentUser,
             isLoading,
             signInWithGoogle,
-            signInWithEmail,
-            signUpWithEmail,
+            signInWithId,
+            signUpWithId,
             signOut,
             updateProfile
         }}>

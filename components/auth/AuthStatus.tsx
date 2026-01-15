@@ -6,29 +6,50 @@ import { LogIn, User as UserIcon, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function AuthStatus() {
-    const { currentUser, isLoading, signInWithGoogle, signInWithEmail, signUpWithEmail, signOut, updateProfile } = useReading();
+    const { currentUser, isLoading, signInWithGoogle, signInWithId, signUpWithId, signOut, updateProfile } = useReading();
     const [nickname, setNickname] = useState('');
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+    const [userId, setUserId] = useState('');
+    const [memberNumber, setMemberNumber] = useState('');
+    const [confirmMemberNumber, setConfirmMemberNumber] = useState('');
     const [isUpdating, setIsUpdating] = useState(false);
     const [showProfileSetup, setShowProfileSetup] = useState(false);
     const [authMode, setAuthMode] = useState<'login' | 'signup' | 'idle'>('idle');
 
-    const handleEmailAuth = async (e: React.FormEvent) => {
+    const handleIdAuth = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (authMode === 'signup') {
+            if (!nickname.trim()) {
+                alert('닉네임을 입력해 주세요.');
+                return;
+            }
+            if (memberNumber !== confirmMemberNumber) {
+                alert('회원번호가 일치하지 않습니다.');
+                return;
+            }
+            if (memberNumber.length < 6) {
+                alert('회원번호는 최소 6자리 이상이어야 합니다.');
+                return;
+            }
+        }
+
         setIsUpdating(true);
         try {
             if (authMode === 'login') {
-                const { error } = await signInWithEmail(email, password);
+                const { error } = await signInWithId(userId, memberNumber);
                 if (error) throw error;
             } else {
-                const { error } = await signUpWithEmail(email, password);
+                const { error } = await signUpWithId(userId, memberNumber, nickname);
                 if (error) throw error;
-                alert('회원가입 확인 메일이 발송되었습니다 (또는 즉시 로그인 가능).');
+                alert('회원가입이 완료되었습니다! 이제 로그인해 주세요.');
+                setAuthMode('login');
+                setMemberNumber('');
             }
-            setAuthMode('idle');
+            if (authMode === 'login') {
+                setAuthMode('idle');
+            }
         } catch (err: any) {
-            alert(err.message || '인증 중 오류가 발생했습니다.');
+            alert(err.message || '인증 중 오류가 발생했습니다. 아이디나 번호를 확인해 주세요.');
         } finally {
             setIsUpdating(false);
         }
@@ -67,43 +88,74 @@ export function AuthStatus() {
             return (
                 <div className="p-4 bg-white border border-[#EBEBEB] rounded-xl shadow-sm">
                     <h3 className="text-sm font-bold text-[#37352F] mb-4">
-                        {authMode === 'login' ? '이메일 로그인' : '이메일 회원가입'}
+                        {authMode === 'login' ? '간편 로그인' : '정회원 가입'}
                     </h3>
-                    <form onSubmit={handleEmailAuth} className="space-y-3">
+                    <form onSubmit={handleIdAuth} className="space-y-3">
+                        {authMode === 'signup' && (
+                            <div>
+                                <label className="text-[10px] text-[#A1A1A1] mb-1 block">닉네임</label>
+                                <input
+                                    type="text"
+                                    value={nickname}
+                                    onChange={(e) => setNickname(e.target.value)}
+                                    placeholder="공유할 이름"
+                                    className="w-full px-3 py-2 text-sm border border-[#EBEBEB] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/10"
+                                    required
+                                />
+                            </div>
+                        )}
                         <div>
+                            <label className="text-[10px] text-[#A1A1A1] mb-1 block">아이디</label>
                             <input
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                placeholder="이메일"
+                                type="text"
+                                value={userId}
+                                onChange={(e) => setUserId(e.target.value)}
+                                placeholder="아이디 입력"
                                 className="w-full px-3 py-2 text-sm border border-[#EBEBEB] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/10"
                                 required
                             />
                         </div>
                         <div>
+                            <label className="text-[10px] text-[#A1A1A1] mb-1 block">회원번호 (비밀번호)</label>
                             <input
                                 type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="비밀번호"
+                                value={memberNumber}
+                                onChange={(e) => setMemberNumber(e.target.value)}
+                                placeholder="번호 입력 (6자리 이상)"
                                 className="w-full px-3 py-2 text-sm border border-[#EBEBEB] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/10"
                                 required
                             />
                         </div>
+                        {authMode === 'signup' && (
+                            <div>
+                                <label className="text-[10px] text-[#A1A1A1] mb-1 block">회원번호 확인</label>
+                                <input
+                                    type="password"
+                                    value={confirmMemberNumber}
+                                    onChange={(e) => setConfirmMemberNumber(e.target.value)}
+                                    placeholder="번호 재입력"
+                                    className="w-full px-3 py-2 text-sm border border-[#EBEBEB] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/10"
+                                    required
+                                />
+                            </div>
+                        )}
                         <button
                             type="submit"
                             disabled={isUpdating}
                             className="w-full py-2 bg-[#37352F] text-white text-xs font-bold rounded-lg hover:bg-black transition-all"
                         >
-                            {isUpdating ? '처리 중...' : (authMode === 'login' ? '로그인' : '가입하기')}
+                            {isUpdating ? '처리 중...' : (authMode === 'login' ? '로그인' : '가입 완료')}
                         </button>
                     </form>
                     <div className="mt-4 pt-4 border-t border-[#F1F1F0] flex flex-col gap-2">
                         <button
-                            onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
+                            onClick={() => {
+                                setAuthMode(authMode === 'login' ? 'signup' : 'login');
+                                setConfirmMemberNumber('');
+                            }}
                             className="text-[11px] text-[#787774] hover:text-[#37352F] hover:underline"
                         >
-                            {authMode === 'login' ? '계정이 없으신가요? 회원가입' : '이미 계정이 있나요? 로그인'}
+                            {authMode === 'login' ? '아이디가 없으신가요? 회원가입' : '이미 아이디가 있나요? 로그인'}
                         </button>
                         <button
                             onClick={() => setAuthMode('idle')}
@@ -119,18 +171,18 @@ export function AuthStatus() {
         return (
             <div className="space-y-2">
                 <button
-                    onClick={signInWithGoogle}
+                    onClick={() => setAuthMode('login')}
                     className="flex items-center gap-2 w-full px-3 py-2.5 text-[#37352F] border border-[#EBEBEB] hover:bg-[#F1F1F0] rounded-lg transition-colors text-sm font-medium bg-white"
                 >
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-4 h-4" alt="" />
-                    <span>Google로 계속하기</span>
+                    <LogIn size={18} />
+                    <span>아이디로 로그인/가입</span>
                 </button>
                 <button
-                    onClick={() => setAuthMode('login')}
-                    className="flex items-center gap-2 w-full px-3 py-2.5 text-[#787774] hover:bg-[#F1F1F0] rounded-lg transition-colors text-sm font-medium"
+                    onClick={signInWithGoogle}
+                    className="flex items-center gap-2 w-full px-3 py-2.5 text-[#787774] hover:bg-[#F1F1F0] rounded-lg transition-colors text-[11px] font-medium"
                 >
-                    <LogIn size={18} />
-                    <span>이메일로 로그인/가입</span>
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-3 h-3 grayscale opacity-70" alt="" />
+                    <span>Google로 계속하기</span>
                 </button>
             </div>
         );
