@@ -128,12 +128,24 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
                     email: supabaseUser.email
                 });
             } else {
+                // Auto-create profile on first login for DB integrity
+                const initialProfile = {
+                    id: supabaseUser.id,
+                    display_name: supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || '익명',
+                    avatar_url: supabaseUser.user_metadata?.avatar_url,
+                    role: 'teacher'
+                };
+
+                await supabase.from('users').insert([initialProfile]);
+
                 setCurrentUser({
                     id: supabaseUser.id,
-                    name: supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || '',
-                    avatar_url: supabaseUser.user_metadata?.avatar_url,
+                    name: initialProfile.display_name,
+                    avatar_url: initialProfile.avatar_url,
                     email: supabaseUser.email
                 });
+
+                loadInitialData(); // Refresh users list
             }
         } catch (err) {
             console.error('Error fetching profile:', err);
@@ -229,13 +241,28 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
     };
 
     const addJournalPost = async (post: JournalPost) => {
-        const { id, ...postWithoutId } = post;
-        const { data, error } = await supabase.from('journals').insert([postWithoutId]).select().single();
+        if (!currentUser) {
+            alert('로그인이 필요합니다.');
+            return;
+        }
+
+        const { id, created_at, updated_at, ...postData } = post;
+
+        // Ensure the post has the correct authenticated user_id
+        const finalPost = {
+            ...postData,
+            user_id: currentUser.id,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        };
+
+        const { data, error } = await supabase.from('journals').insert([finalPost]).select().single();
+
         if (!error && data) {
             setJournalPosts(prev => [data as any, ...prev]);
         } else if (error) {
             console.error('Error adding post:', error.message);
-            alert('게시글 저장에 실패했습니다: ' + error.message);
+            alert('게시글 저장 실패: ' + error.message);
         }
     };
 
