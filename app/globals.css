@@ -1,8 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Warm Yellow Pastel Theme */
+  --background: #FFFEF9;
+  --foreground: #4A4A3A;
+  --primary: #FFD97D;
+  --primary-light: #FFF4D9;
+  --primary-dark: #F5C563;
+  --accent: #FFB84D;
+  --accent-light: #FFE8C2;
+  --border: #F5E6D3;
+  --card-bg: #FFFCF5;
+  --hover-bg: #FFF9E6;
+  --text-muted: #8B8B7A;
+  --shadow: rgba(245, 198, 99, 0.1);
 }
 
 @theme inline {
@@ -14,13 +25,47 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #2A2A1F;
+    --foreground: #F5F5E6;
+    --primary: #D4A574;
+    --primary-light: #3A3A2F;
+    --primary-dark: #B8935E;
+    --accent: #E6B86B;
+    --accent-light: #4A4A3F;
+    --border: #4A4A3F;
+    --card-bg: #333329;
+    --hover-bg: #3A3A2F;
+    --text-muted: #A8A896;
+    --shadow: rgba(212, 165, 116, 0.2);
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* Smooth transitions */
+* {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-dark);
 }

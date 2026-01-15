@@ -54,15 +54,15 @@ export function Sidebar() {
         <>
             <div
                 className={cn(
-                    "flex flex-col h-screen bg-[#FBFBFA] border-r border-[#EBEBEB] transition-all duration-300 ease-in-out sticky top-0",
+                    "flex flex-col h-screen bg-[#FFFCF5] border-r border-[#F5E6D3] transition-all duration-300 ease-in-out sticky top-0",
                     collapsed ? "w-16" : "w-64"
                 )}
             >
                 {/* User / Workspace Header */}
                 <div className="p-4 flex items-center justify-between">
                     {!collapsed && (
-                        <div className="flex items-center gap-2 font-semibold text-[#37352F]">
-                            <div className="w-6 h-6 bg-blue-500 rounded flex items-center justify-center text-white text-xs">
+                        <div className="flex items-center gap-2 font-semibold text-[#4A4A3A]">
+                            <div className="w-6 h-6 bg-gradient-to-br from-[#FFD97D] to-[#FFB84D] rounded flex items-center justify-center text-white text-xs font-bold shadow-sm">
                                 M
                             </div>
                             <span className="truncate">수학 독서 모임</span>
@@ -70,7 +70,7 @@ export function Sidebar() {
                     )}
                     <button
                         onClick={() => setCollapsed(!collapsed)}
-                        className="p-1 hover:bg-[#EFEFEF] rounded-md text-[#A1A1A1]"
+                        className="p-1 hover:bg-[#FFF9E6] rounded-md text-[#8B8B7A] transition-colors"
                     >
                         {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
                     </button>
@@ -81,7 +81,7 @@ export function Sidebar() {
                     <button
                         onClick={() => setIsSearchOpen(true)}
                         className={cn(
-                            "w-full flex items-center gap-2 p-2 text-[#787774] hover:bg-[#EFEFEF] rounded-md transition-colors text-left",
+                            "w-full flex items-center gap-2 p-2 text-[#8B8B7A] hover:bg-[#FFF9E6] rounded-md transition-colors text-left",
                             collapsed ? "justify-center" : "px-3"
                         )}
                     >
@@ -101,15 +101,15 @@ export function Sidebar() {
                                 className={cn(
                                     "flex items-center gap-2 p-2 rounded-md transition-colors group",
                                     isActive
-                                        ? "bg-[#EFEFEF] text-[#37352F] font-medium"
-                                        : "text-[#787774] hover:bg-[#F1F1F0]",
+                                        ? "bg-gradient-to-r from-[#FFF4D9] to-[#FFE8C2] text-[#4A4A3A] font-medium shadow-sm"
+                                        : "text-[#8B8B7A] hover:bg-[#FFF9E6]",
                                     collapsed ? "justify-center" : "px-3"
                                 )}
                             >
                                 <item.icon
                                     size={18}
                                     className={cn(
-                                        isActive ? "text-[#37352F]" : "text-[#787774] group-hover:text-[#37352F]"
+                                        isActive ? "text-[#FFB84D]" : "text-[#8B8B7A] group-hover:text-[#FFB84D]"
                                     )}
                                 />
                                 {!collapsed && <span className="text-sm">{item.name}</span>}
