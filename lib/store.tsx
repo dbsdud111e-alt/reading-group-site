@@ -126,16 +126,36 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
             }
         });
 
+        // REALTIME SUBSCRIPTIONS
+        const journalsChannel = supabase
+            .channel('journals_realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'journals' }, () => {
+                loadInitialData(); // Re-fetch on any journal change
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'comments' }, () => {
+                loadInitialData();
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'books' }, () => {
+                loadInitialData();
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, () => {
+                loadInitialData();
+            })
+            .subscribe();
+
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
             if (session) {
                 await fetchProfile(session.user);
-                loadInitialData(); // Refresh data when login state changes
+                loadInitialData();
             } else {
                 setCurrentUser(null);
             }
         });
 
-        return () => subscription.unsubscribe();
+        return () => {
+            subscription.unsubscribe();
+            supabase.removeChannel(journalsChannel);
+        };
     }, []);
 
     const fetchProfile = async (supabaseUser: SupabaseUser) => {
