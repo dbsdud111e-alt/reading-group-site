@@ -19,32 +19,31 @@ export default function BooksPage() {
             created_at: new Date().toISOString()
         };
 
-        // Add book first and wait for the response with the generated ID
-        await addBook(newBook);
+        // Add book and get the created book with server-generated ID
+        const addedBook = await addBook(newBook);
 
-        // Wait a moment for the book to be added to the state
-        setTimeout(async () => {
-            // Get the most recently added book (should be the one we just added)
-            const addedBook = books[0];
+        if (!addedBook) {
+            alert('도서 등록에 실패했습니다. 로그인 상태를 확인해주세요.');
+            return;
+        }
 
-            // If there are schedules, add them all to the calendar
-            if (bookData.schedules && bookData.schedules.length > 0 && addedBook?.id) {
-                for (const schedule of bookData.schedules) {
-                    await addSchedule({
-                        book_id: addedBook.id,
-                        book_title: addedBook.title!,
-                        book_cover: addedBook.cover_url!,
-                        start_date: schedule.start_date,
-                        end_date: schedule.end_date,
-                        range_text: schedule.range_text || "독서 시작",
-                        created_at: new Date().toISOString()
-                    });
-                }
+        // If there are schedules, add them all to the calendar
+        if (bookData.schedules && bookData.schedules.length > 0 && addedBook.id) {
+            for (const schedule of bookData.schedules) {
+                await addSchedule({
+                    book_id: addedBook.id!,
+                    book_title: addedBook.title!,
+                    book_cover: addedBook.cover_url!,
+                    start_date: schedule.start_date,
+                    end_date: schedule.end_date,
+                    range_text: schedule.range_text || "독서 시작",
+                    created_at: new Date().toISOString()
+                });
             }
+        }
 
-            const scheduleCount = bookData.schedules?.length || 0;
-            alert(`"${bookData.book.title}"이(가) 서재에 추가되었습니다.${scheduleCount > 0 ? ` ${scheduleCount}개의 일정이 캘린더에 등록되었습니다.` : ''}`);
-        }, 500);
+        const scheduleCount = bookData.schedules?.length || 0;
+        alert(`"${bookData.book.title}"이(가) 서재에 추가되었습니다.${scheduleCount > 0 ? ` ${scheduleCount}개의 일정이 캘린더에 등록되었습니다.` : ''}`);
     };
 
     const filteredBooks = books.filter(book => {

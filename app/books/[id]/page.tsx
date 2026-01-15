@@ -70,7 +70,6 @@ export default function BookDetailPage() {
         const validSchedules = newSchedules.filter(s => s.start_date && s.end_date);
         validSchedules.forEach(schedule => {
             addSchedule({
-                id: Math.random().toString(36).substr(2, 9),
                 book_id: bookId,
                 book_title: book.title!,
                 book_cover: book.cover_url!,

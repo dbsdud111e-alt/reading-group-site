@@ -41,10 +41,10 @@ interface ReadingContextType {
     schedules: Schedule[];
     journalPosts: JournalPost[];
     users: User[];
-    addBook: (book: any) => void;
+    addBook: (book: any) => Promise<Partial<Book> | null>;
     updateBook: (bookId: string, updates: Partial<Book>) => void;
     deleteBook: (bookId: string) => void;
-    addSchedule: (schedule: Schedule) => void;
+    addSchedule: (schedule: Omit<Schedule, 'id'>) => void;
     updateSchedule: (id: string, updates: Partial<Schedule>) => void;
     deleteSchedule: (id: string) => void;
     addJournalPost: (post: JournalPost) => void;
@@ -194,7 +194,7 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
     }, [materialTags, globalFilterTags]);
 
     const addBook = async (newBook: any) => {
-        if (!currentUser) return;
+        if (!currentUser) return null;
 
         const { data, error } = await supabase.from('books').insert([{
             ...newBook,
@@ -203,7 +203,9 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
 
         if (!error && data) {
             setBooks(prev => [data, ...prev]);
+            return data;
         }
+        return null;
     };
 
     const updateBook = async (bookId: string, updates: Partial<Book>) => {
