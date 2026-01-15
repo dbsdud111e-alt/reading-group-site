@@ -152,6 +152,8 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
             }
         } catch (err) {
             console.error('Error fetching profile:', err);
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -160,7 +162,11 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
 
         // Check active session
         supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session) fetchProfile(session.user);
+            if (session) {
+                fetchProfile(session.user);
+            } else {
+                setIsLoading(false);
+            }
         });
 
         // REALTIME SUBSCRIPTIONS
@@ -180,6 +186,7 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
             } else {
                 setCurrentUser(null);
             }
+            setIsLoading(false);
         });
 
         return () => {
