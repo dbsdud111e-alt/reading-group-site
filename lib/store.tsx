@@ -83,36 +83,51 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const savedBooks = localStorage.getItem('math-books');
-        const savedSchedules = localStorage.getItem('math-schedules');
-        const savedPosts = localStorage.getItem('math-journal-posts');
-        const savedUsers = localStorage.getItem('math-users');
-        const savedMaterialTags = localStorage.getItem('math-material-tags');
-        const savedGlobalTags = localStorage.getItem('math-global-filter-tags');
+        const loadInitialData = async () => {
+            setIsLoading(true);
+            try {
+                // Fetch Books
+                const { data: dbBooks } = await supabase.from('books').select('*').order('created_at', { ascending: false });
+                if (dbBooks) setBooks(dbBooks);
 
-        if (savedBooks) setBooks(JSON.parse(savedBooks));
-        if (savedSchedules) setSchedules(JSON.parse(savedSchedules));
-        if (savedPosts) setJournalPosts(JSON.parse(savedPosts));
-        if (savedUsers) setUsers(JSON.parse(savedUsers));
-        if (savedMaterialTags) setMaterialTags(JSON.parse(savedMaterialTags));
-        if (savedGlobalTags) setGlobalFilterTags(JSON.parse(savedGlobalTags));
+                // Fetch Schedules
+                const { data: dbSchedules } = await supabase.from('schedules').select('*');
+                if (dbSchedules) setSchedules(dbSchedules);
+
+                // Fetch Journal Posts
+                const { data: dbPosts } = await supabase.from('journals').select('*').order('created_at', { ascending: false });
+                if (dbPosts) setJournalPosts(dbPosts as any);
+
+                // Fetch Registered Users
+                const { data: dbUsers } = await supabase.from('users').select('*');
+                if (dbUsers) {
+                    setUsers(dbUsers.map(u => ({
+                        id: u.id,
+                        name: u.display_name || '익명',
+                        avatar_url: u.avatar_url
+                    })));
+                }
+            } catch (err) {
+                console.error('Initial fetch failed:', err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        loadInitialData();
 
         // Check active session
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (session) {
                 fetchProfile(session.user);
-            } else {
-                setIsLoading(false);
             }
         });
 
-        // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             if (session) {
                 fetchProfile(session.user);
             } else {
                 setCurrentUser(null);
-                setIsLoading(false);
             }
         });
 
@@ -152,70 +167,103 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
     };
 
     useEffect(() => {
-        localStorage.setItem('math-books', JSON.stringify(books));
-        localStorage.setItem('math-schedules', JSON.stringify(schedules));
-        localStorage.setItem('math-journal-posts', JSON.stringify(journalPosts));
-        localStorage.setItem('math-users', JSON.stringify(users));
         localStorage.setItem('math-material-tags', JSON.stringify(materialTags));
         localStorage.setItem('math-global-filter-tags', JSON.stringify(globalFilterTags));
-    }, [books, schedules, journalPosts, users, materialTags, globalFilterTags]);
+    }, [materialTags, globalFilterTags]);
 
-    const addBook = (newBook: any) => {
-        setBooks(prev => [
-            {
-                ...newBook,
-                id: Math.random().toString(36).substr(2, 9),
-                created_at: new Date().toISOString()
-            },
-            ...prev
-        ]);
+    const addBook = async (newBook: any) => {
+        if (!currentUser) return;
+
+        const { data, error } = await supabase.from('books').insert([{
+            ...newBook,
+            created_at: new Date().toISOString()
+        }]).select().single();
+
+        if (!error && data) {
+            setBooks(prev => [data, ...prev]);
+        }
     };
 
-    const updateBook = (bookId: string, updates: Partial<Book>) => {
-        setBooks(prev => prev.map(b => b.id === bookId ? { ...b, ...updates } : b));
+    const updateBook = async (bookId: string, updates: Partial<Book>) => {
+        const { error } = await supabase.from('books').update(updates).eq('id', bookId);
+        if (!error) {
+            setBooks(prev => prev.map(b => b.id === bookId ? { ...b, ...updates } : b));
+        }
     };
 
-    const deleteBook = (bookId: string) => {
-        setBooks(prev => prev.filter(b => b.id !== bookId));
-        // Also delete related schedules and journal posts
-        setSchedules(prev => prev.filter(s => s.book_id !== bookId));
-        setJournalPosts(prev => prev.filter(p => p.book_id !== bookId));
+    const deleteBook = async (bookId: string) => {
+        const { error } = await supabase.from('books').delete().eq('id', bookId);
+        if (!error) {
+            setBooks(prev => prev.filter(b => b.id !== bookId));
+            setSchedules(prev => prev.filter(s => s.book_id !== bookId));
+            setJournalPosts(prev => prev.filter(p => p.book_id !== bookId));
+        }
     };
 
-    const addSchedule = (schedule: Schedule) => {
-        setSchedules(prev => [...prev, schedule]);
+    const addSchedule = async (schedule: Schedule) => {
+        const { error } = await supabase.from('schedules').insert([schedule]);
+        if (!error) {
+            setSchedules(prev => [...prev, schedule]);
+        }
     };
 
-    const updateSchedule = (id: string, updates: Partial<Schedule>) => {
-        setSchedules(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+    const updateSchedule = async (id: string, updates: Partial<Schedule>) => {
+        const { error } = await supabase.from('schedules').update(updates).eq('id', id);
+        if (!error) {
+            setSchedules(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+        }
     };
 
-    const deleteSchedule = (id: string) => {
-        setSchedules(prev => prev.filter(s => s.id !== id));
+    const deleteSchedule = async (id: string) => {
+        const { error } = await supabase.from('schedules').delete().eq('id', id);
+        if (!error) {
+            setSchedules(prev => prev.filter(s => s.id !== id));
+        }
     };
 
-    const addJournalPost = (post: JournalPost) => {
-        setJournalPosts(prev => [...prev, post]);
+    const addJournalPost = async (post: JournalPost) => {
+        const { data, error } = await supabase.from('journals').insert([post]).select().single();
+        if (!error && data) {
+            setJournalPosts(prev => [data as any, ...prev]);
+        }
     };
 
-    const updateJournalPost = (id: string, updates: Partial<JournalPost>) => {
-        setJournalPosts(prev => prev.map(p => p.id === id ? { ...p, ...updates, updated_at: new Date().toISOString() } : p));
+    const updateJournalPost = async (id: string, updates: Partial<JournalPost>) => {
+        const { error } = await supabase.from('journals').update(updates).eq('id', id);
+        if (!error) {
+            setJournalPosts(prev => prev.map(p => p.id === id ? { ...p, ...updates, updated_at: new Date().toISOString() } : p));
+        }
     };
 
-    const deleteJournalPost = (id: string) => {
-        setJournalPosts(prev => prev.filter(p => p.id !== id));
+    const deleteJournalPost = async (id: string) => {
+        const { error } = await supabase.from('journals').delete().eq('id', id);
+        if (!error) {
+            setJournalPosts(prev => prev.filter(p => p.id !== id));
+        }
     };
 
-    const addComment = (postId: string, comment: Comment) => {
-        setJournalPosts(prev => prev.map(p =>
-            p.id === postId ? { ...p, comments: [...(p.comments || []), comment] } : p
-        ));
+    const addComment = async (postId: string, comment: Comment) => {
+        const { error } = await supabase.from('comments').insert([{
+            journal_id: postId,
+            user_id: comment.user_id,
+            content: comment.content,
+            created_at: comment.created_at
+        }]);
+
+        if (!error) {
+            setJournalPosts(prev => prev.map(p =>
+                p.id === postId ? { ...p, comments: [...(p.comments || []), comment] } : p
+            ));
+        }
     };
 
-    const deleteComment = (postId: string, commentId: string) => {
-        setJournalPosts(prev => prev.map(p =>
-            p.id === postId ? { ...p, comments: (p.comments || []).filter(c => c.id !== commentId) } : p
-        ));
+    const deleteComment = async (postId: string, commentId: string) => {
+        const { error } = await supabase.from('comments').delete().eq('id', commentId);
+        if (!error) {
+            setJournalPosts(prev => prev.map(p =>
+                p.id === postId ? { ...p, comments: (p.comments || []).filter(c => c.id !== commentId) } : p
+            ));
+        }
     };
 
     const updateUserName = (userId: string, newName: string) => {
@@ -226,11 +274,13 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
         setUsers(prev => [...prev, user]);
     };
 
-    const addMaterialTag = (tag: string) => {
+    const addMaterialTag = async (tag: string) => {
+        // For simplicity, keeping tags local for now as they are project-wide defaults
+        // but could be moved to DB if needed.
         setMaterialTags(prev => prev.includes(tag) ? prev : [...prev, tag]);
     };
 
-    const deleteMaterialTag = (tag: string) => {
+    const deleteMaterialTag = async (tag: string) => {
         setMaterialTags(prev => prev.filter(t => t !== tag));
     };
 
