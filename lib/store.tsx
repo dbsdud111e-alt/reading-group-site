@@ -218,15 +218,36 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
     }, [materialTags, globalFilterTags]);
 
     const addBook = async (newBook: any) => {
-        if (!currentUser) return null;
+        if (!currentUser) {
+            console.error('addBook: No current user');
+            return null;
+        }
 
-        const { data, error } = await supabase.from('books').insert([{
+        // 1. Try insert WITH user_id (User-specific books)
+        const payload = {
             ...newBook,
             user_id: currentUser.id,
             created_at: new Date().toISOString()
-        }]).select().single();
+        };
 
-        if (!error && data) {
+        let { data, error } = await supabase.from('books').insert([payload]).select().single();
+
+        // 2. Fallback: If 'user_id' column doesn't exist, try WITHOUT it (Shared books)
+        if (error && error.message?.includes('user_id')) {
+            console.warn('addBook: user_id column missing, retrying without it.');
+            const { user_id, ...payloadWithoutUser } = payload;
+            const retry = await supabase.from('books').insert([payloadWithoutUser]).select().single();
+            data = retry.data;
+            error = retry.error;
+        }
+
+        if (error) {
+            console.error('addBook failed:', error);
+            alert(`도서 등록 실패: ${error.message}`); // Show specific error to user
+            return null;
+        }
+
+        if (data) {
             setBooks(prev => [data, ...prev]);
             return data;
         }
