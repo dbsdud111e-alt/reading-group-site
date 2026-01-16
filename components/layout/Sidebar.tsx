@@ -13,7 +13,8 @@ import {
     ChevronRight,
     Plus,
     Search,
-    Shield
+    Shield,
+    FileText
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReading } from '@/lib/store';
