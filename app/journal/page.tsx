@@ -975,7 +975,7 @@ function JournalPageContent() {
                                     </>
                                 );
                             })()}
-                        </div >
+                        </div>
                     </div>
                 )}
             </div>
