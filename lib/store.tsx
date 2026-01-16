@@ -362,9 +362,9 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
     };
 
     // Helper for timeouts
-    const withTimeout = <T,>(promise: Promise<T>, ms: number = 7000): Promise<T> => {
+    const withTimeout = <T,>(promise: Promise<T> | PromiseLike<T>, ms: number = 7000): Promise<T> => {
         return Promise.race([
-            promise,
+            Promise.resolve(promise),
             new Promise<T>((_, reject) =>
                 setTimeout(() => reject(new Error('서버 응답 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.')), ms)
             )
