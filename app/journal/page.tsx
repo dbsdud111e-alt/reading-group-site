@@ -611,11 +611,26 @@ function JournalPageContent() {
                             <div className="w-full max-w-4xl max-h-[95vh] bg-white rounded-[32px] shadow-2xl flex flex-col overflow-hidden">
                                 {/* Header (Sticky) */}
                                 <div className="flex-none flex items-center justify-between px-8 py-6 border-b border-[#EBEBEB] bg-white">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-[#FFFCF5] border border-[#FFD97D] rounded-xl flex items-center justify-center text-[#FFB84D] shadow-sm">
-                                            <ImageIcon size={20} />
-                                        </div>
-                                        <h2 className="text-2xl font-bold text-[#37352F] tracking-tight">{editingPost ? `${categoryLabel} 수정` : `새로운 ${categoryLabel}`}</h2>
+                                    <div className="flex items-center gap-4">
+                                        <h2 className="text-2xl font-bold text-[#37352F] tracking-tight">
+                                            {editingPost ? `${categoryLabel || '기록'} 수정` : `새로운 ${categoryLabel || '기록'}`}
+                                        </h2>
+                                        {!editingPost && (
+                                            <div className="flex items-center gap-1">
+                                                {categories
+                                                    .filter(cat => cat.id !== activeCategory)
+                                                    .map(cat => (
+                                                        <button
+                                                            key={cat.id}
+                                                            onClick={() => setActiveCategory(cat.id)}
+                                                            className="px-2.5 py-1.5 text-xs font-medium text-[#A1A1A1] hover:text-[#37352F] hover:bg-[#F1F1F0] rounded-lg transition-all"
+                                                        >
+                                                            {cat.label}
+                                                        </button>
+                                                    ))
+                                                }
+                                            </div>
+                                        )}
                                     </div>
                                     <button
                                         onClick={() => {
