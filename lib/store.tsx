@@ -129,26 +129,29 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
         setCurrentUser(initialUser);
         setIsLoading(false);
 
-        // Step 2: Background profile/DB check (Don't await it!)
-        supabase.from('users').select('display_name, avatar_url').eq('id', supabaseUser.id).maybeSingle()
-            .then(({ data }) => {
-                if (data) {
-                    setCurrentUser(prev => prev ? {
-                        ...prev,
-                        name: data.display_name || prev.name,
-                        avatar_url: data.avatar_url || prev.avatar_url
-                    } : null);
-                } else {
-                    // Create profile if missing
-                    supabase.from('users').insert([{
-                        id: supabaseUser.id,
-                        display_name: initialUser.name,
-                        avatar_url: initialUser.avatar_url,
-                        role: 'teacher'
-                    }]).then(() => loadInitialData());
-                }
-            })
-            .catch(err => console.error('BG Profile Fetch Error:', err));
+        // Step 2: Background profile/DB check
+        try {
+            const { data } = await supabase.from('users').select('display_name, avatar_url').eq('id', supabaseUser.id).maybeSingle();
+
+            if (data) {
+                setCurrentUser(prev => prev ? {
+                    ...prev,
+                    name: data.display_name || prev.name,
+                    avatar_url: data.avatar_url || prev.avatar_url
+                } : null);
+            } else {
+                // Create profile if missing
+                await supabase.from('users').insert([{
+                    id: supabaseUser.id,
+                    display_name: initialUser.name,
+                    avatar_url: initialUser.avatar_url,
+                    role: 'teacher'
+                }]);
+                await loadInitialData();
+            }
+        } catch (err) {
+            console.error('BG Profile Fetch Error:', err);
+        }
     };
 
     useEffect(() => {
