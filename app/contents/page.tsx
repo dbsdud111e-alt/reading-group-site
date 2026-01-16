@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import Link from 'next/link';
-import { Layers, FileText, Download, ExternalLink, Filter, Search, Plus, X, Check, BookOpen, Link as LinkIcon, Trash2, MessageCircle, ArrowRight, Image as ImageIcon, Edit2 } from 'lucide-react';
+import { Layers, FileText, Download, ExternalLink, Search, Plus, X, BookOpen, Link as LinkIcon, Trash2, MessageCircle, ArrowRight, Image as ImageIcon, Edit2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReading, JournalPost, Comment } from '@/lib/store';
 
