@@ -413,8 +413,9 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
             if (authError) return { error: authError };
 
             // 2. Create profile in users table (with Timeout)
+            // 2. Create profile in users table (with Timeout)
             if (data.user) {
-                const { error: profileError } = await withTimeout(
+                const { error: profileError } = await withTimeout<any>(
                     supabase.from('users').upsert({
                         id: data.user.id,
                         display_name: cleanNickname,
