@@ -471,99 +471,99 @@ export default function BookDetailPage() {
                     )}
                 </div>
             </div>
-        </div>
 
-            {/* Write Modal */ }
-    {
-        isWriting && (
-            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                <div className="w-full max-w-4xl max-h-[90vh] bg-[#FFFEF9] rounded-[32px] shadow-2xl overflow-y-auto p-8 md:p-12 relative">
-                    <div className="flex items-center justify-between mb-8 pb-4 border-b border-[#F5E6D3]">
-                        <h2 className="text-2xl font-black text-[#37352F]">{editingPost ? '기록 수정' : '새로운 독서 기록'}</h2>
-                        <button onClick={() => setIsWriting(false)} className="p-2 hover:bg-rose-50 rounded-xl text-rose-500 transition-all">
-                            <X size={24} />
-                        </button>
+
+            {/* Write Modal */}
+            {
+                isWriting && (
+                    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                        <div className="w-full max-w-4xl max-h-[90vh] bg-[#FFFEF9] rounded-[32px] shadow-2xl overflow-y-auto p-8 md:p-12 relative">
+                            <div className="flex items-center justify-between mb-8 pb-4 border-b border-[#F5E6D3]">
+                                <h2 className="text-2xl font-black text-[#37352F]">{editingPost ? '기록 수정' : '새로운 독서 기록'}</h2>
+                                <button onClick={() => setIsWriting(false)} className="p-2 hover:bg-rose-50 rounded-xl text-rose-500 transition-all">
+                                    <X size={24} />
+                                </button>
+                            </div>
+
+                            <div
+                                ref={editorRef}
+                                contentEditable
+                                onInput={(e) => setContent(e.currentTarget.innerHTML)}
+                                className="w-full min-h-[300px] max-h-[500px] bg-white border border-[#F5E6D3] rounded-2xl px-6 py-8 focus:outline-none transition-all rich-editor text-lg leading-relaxed text-[#37352F] shadow-inner overflow-y-auto mb-8"
+                                style={{ outline: 'none' }}
+                                dangerouslySetInnerHTML={editingPost ? { __html: content } : undefined}
+                            />
+
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={() => setIsWriting(false)}
+                                    className="flex-1 py-4 bg-white text-[#787774] rounded-2xl text-sm font-bold border border-[#EBEBEB] hover:bg-[#F9F9F8] transition-all"
+                                >
+                                    취소
+                                </button>
+                                <button
+                                    onClick={handleWriteSubmit}
+                                    className="flex-[2] py-4 bg-[#37352F] text-white rounded-2xl text-sm font-bold hover:bg-black transition-all shadow-lg flex items-center justify-center gap-2"
+                                >
+                                    <Check size={18} /> 완료하기
+                                </button>
+                            </div>
+                        </div>
                     </div>
+                )
+            }
 
-                    <div
-                        ref={editorRef}
-                        contentEditable
-                        onInput={(e) => setContent(e.currentTarget.innerHTML)}
-                        className="w-full min-h-[300px] max-h-[500px] bg-white border border-[#F5E6D3] rounded-2xl px-6 py-8 focus:outline-none transition-all rich-editor text-lg leading-relaxed text-[#37352F] shadow-inner overflow-y-auto mb-8"
-                        style={{ outline: 'none' }}
-                        dangerouslySetInnerHTML={editingPost ? { __html: content } : undefined}
-                    />
+            {/* View Modal */}
+            {
+                viewingPostId && (
+                    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                        <div className="w-full max-w-4xl max-h-[90vh] bg-[#FFFEF9] rounded-[32px] shadow-2xl overflow-y-auto p-8 md:p-12 relative">
+                            {(() => {
+                                const post = journalPosts.find(p => p.id === viewingPostId);
+                                if (!post) return null;
 
-                    <div className="flex gap-4">
-                        <button
-                            onClick={() => setIsWriting(false)}
-                            className="flex-1 py-4 bg-white text-[#787774] rounded-2xl text-sm font-bold border border-[#EBEBEB] hover:bg-[#F9F9F8] transition-all"
-                        >
-                            취소
-                        </button>
-                        <button
-                            onClick={handleWriteSubmit}
-                            className="flex-[2] py-4 bg-[#37352F] text-white rounded-2xl text-sm font-bold hover:bg-black transition-all shadow-lg flex items-center justify-center gap-2"
-                        >
-                            <Check size={18} /> 완료하기
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )
-    }
-
-    {/* View Modal */ }
-    {
-        viewingPostId && (
-            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-                <div className="w-full max-w-4xl max-h-[90vh] bg-[#FFFEF9] rounded-[32px] shadow-2xl overflow-y-auto p-8 md:p-12 relative">
-                    {(() => {
-                        const post = journalPosts.find(p => p.id === viewingPostId);
-                        if (!post) return null;
-
-                        return (
-                            <>
-                                <div className="flex items-center justify-between mb-8 pb-4 border-b border-[#F5E6D3]">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-50 text-blue-600 rounded">독서 기록</span>
-                                        {post.material_status && (
-                                            <span className={cn(
-                                                "text-[10px] font-bold px-2 py-0.5 rounded",
-                                                post.material_status === 'draft' ? "bg-amber-50 text-amber-600" : "bg-green-50 text-green-600"
-                                            )}>
-                                                {post.material_status === 'draft' ? '아이디어' : '완성본'}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <button onClick={() => setViewingPostId(null)} className="p-2 hover:bg-gray-100 rounded-xl">
-                                        <X size={24} />
-                                    </button>
-                                </div>
-                                <h2 className="text-3xl font-black text-[#37352F] mb-6">{post.title}</h2>
-                                <div className="text-lg text-[#37352F] mb-12 rich-content leading-relaxed" dangerouslySetInnerHTML={{ __html: post.content }} />
-
-                                <div className="bg-[#FFFCF5] rounded-[32px] border border-[#F5E6D3] p-8">
-                                    <h3 className="font-bold mb-4">댓글 {post.comments?.length || 0}</h3>
-                                    <div className="space-y-3">
-                                        {post.comments?.map(comment => (
-                                            <div key={comment.id} className="bg-white p-4 rounded-xl border border-[#F5E6D3]">
-                                                <div className="flex justify-between text-[10px] font-bold mb-1">
-                                                    <span>{getUserName(comment.user_id)}</span>
-                                                    <span className="text-[#A1A1A1]">{new Date(comment.created_at).toLocaleDateString()}</span>
-                                                </div>
-                                                <p className="text-sm">{comment.content}</p>
+                                return (
+                                    <>
+                                        <div className="flex items-center justify-between mb-8 pb-4 border-b border-[#F5E6D3]">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-50 text-blue-600 rounded">독서 기록</span>
+                                                {post.material_status && (
+                                                    <span className={cn(
+                                                        "text-[10px] font-bold px-2 py-0.5 rounded",
+                                                        post.material_status === 'draft' ? "bg-amber-50 text-amber-600" : "bg-green-50 text-green-600"
+                                                    )}>
+                                                        {post.material_status === 'draft' ? '아이디어' : '완성본'}
+                                                    </span>
+                                                )}
                                             </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </>
-                        );
-                    })()}
-                </div>
-            </div>
-        )
-    }
+                                            <button onClick={() => setViewingPostId(null)} className="p-2 hover:bg-gray-100 rounded-xl">
+                                                <X size={24} />
+                                            </button>
+                                        </div>
+                                        <h2 className="text-3xl font-black text-[#37352F] mb-6">{post.title}</h2>
+                                        <div className="text-lg text-[#37352F] mb-12 rich-content leading-relaxed" dangerouslySetInnerHTML={{ __html: post.content }} />
+
+                                        <div className="bg-[#FFFCF5] rounded-[32px] border border-[#F5E6D3] p-8">
+                                            <h3 className="font-bold mb-4">댓글 {post.comments?.length || 0}</h3>
+                                            <div className="space-y-3">
+                                                {post.comments?.map(comment => (
+                                                    <div key={comment.id} className="bg-white p-4 rounded-xl border border-[#F5E6D3]">
+                                                        <div className="flex justify-between text-[10px] font-bold mb-1">
+                                                            <span>{getUserName(comment.user_id)}</span>
+                                                            <span className="text-[#A1A1A1]">{new Date(comment.created_at).toLocaleDateString()}</span>
+                                                        </div>
+                                                        <p className="text-sm">{comment.content}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </>
+                                );
+                            })()}
+                        </div>
+                    </div>
+                )
+            }
         </div >
     );
 }

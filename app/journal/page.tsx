@@ -804,9 +804,9 @@ function JournalPageContent() {
                                     </div>
                                 </div>
                             </div>
-                    )}
                         </div>
-            </div>
+                    )}
+                </div>
 
                 {/* View Modal */}
                 {viewingPostId && (
