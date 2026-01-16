@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, Suspense } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, List, Type, HelpCircle, Heart, Lightbulb, Plus, Edit2, Trash2, Upload, Link as LinkIcon, Check, X, FileText, User, MessageSquare, BookOpen, Image as ImageIcon, Eye, EyeOff, Send, Edit3, Share2 } from 'lucide-react';
+import { ChevronLeft, List, HelpCircle, Heart, Lightbulb, Plus, Edit2, Trash2, X, Check, Image as ImageIcon } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useReading, JournalPost } from '@/lib/store';
