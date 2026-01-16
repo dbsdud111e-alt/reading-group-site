@@ -14,7 +14,8 @@ import {
     Plus,
     Search,
     Shield,
-    FileText
+    FileText,
+    User
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReading } from '@/lib/store';
