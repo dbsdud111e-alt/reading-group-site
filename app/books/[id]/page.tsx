@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, Plus, X, Edit2, Check, Trash2, HelpCircle, Lightbulb, List, Heart, User, MessageSquare, BookOpen, FileText, Link as LinkIcon, Send, ImageIcon } from 'lucide-react';
+import { ChevronLeft, Plus, X, Edit2, Check, Trash2, HelpCircle, Lightbulb, List, Heart } from 'lucide-react';
 import { useReading, JournalPost } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { SUBJECT_TAGS } from '@/lib/aladdin/mockApi';
