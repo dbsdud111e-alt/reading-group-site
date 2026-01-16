@@ -260,39 +260,23 @@ function JournalPageContent() {
                 {/* User Tabs */}
                 <div className="flex items-center justify-between border-b border-[#EBEBEB] bg-[#FBFBFA] px-4 py-3">
                     <div className="flex items-center gap-2">
-                        {/* All Users Tab */}
-                        <button
-                            onClick={() => setActiveUser('all')}
-                            className={cn(
-                                "flex items-center gap-1 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors",
-                                activeUser === 'all'
-                                    ? "bg-[#37352F] text-white"
-                                    : "text-[#787774] hover:bg-[#F1F1F0]"
-                            )}
+                        <User size={16} className="text-[#8B8B7A]" />
+                        <span className="text-sm font-bold text-[#4A4A3A] mr-1">작성자:</span>
+                        <select
+                            value={activeUser}
+                            onChange={(e) => setActiveUser(e.target.value)}
+                            className="px-3 py-1.5 text-sm bg-white border border-[#EBEBEB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#EBEBEB] hover:border-gray-300 transition-colors cursor-pointer"
                         >
-                            <User size={14} />
-                            전체 게시판
-                        </button>
-
-                        {/* Individual User Tabs */}
-                        {users.map((user) => (
-                            <button
-                                key={user.id}
-                                onClick={() => {
-                                    setActiveUser(user.id);
-                                }}
-                                className={cn(
-                                    "px-3 py-1.5 text-sm font-medium rounded-lg transition-colors",
-                                    activeUser === user.id
-                                        ? "bg-[#37352F] text-white"
-                                        : "text-[#787774] hover:bg-[#F1F1F0]"
-                                )}
-                            >
-                                {user.name}
-                            </button>
-                        ))}
+                            <option value="all">전체 사용자</option>
+                            {users
+                                .filter(user => user.name !== 'admin' && user.id !== 'admin' && user.name !== 'Admin')
+                                .map((user) => (
+                                    <option key={user.id} value={user.id}>
+                                        {user.name}
+                                    </option>
+                                ))}
+                        </select>
                     </div>
-
                 </div>
 
                 {/* User Management Panel */}
@@ -325,33 +309,22 @@ function JournalPageContent() {
                 )}
 
                 {/* Book Filter Tabs */}
+                {/* Book Filter Dropdown */}
                 {!initialBookId && (
-                    <div className="flex flex-wrap items-center gap-2 border-b border-[#EBEBEB] bg-white px-4 py-2 overflow-x-auto no-scrollbar">
-                        <button
-                            onClick={() => setActiveBook('all')}
-                            className={cn(
-                                "whitespace-nowrap px-3 py-1.5 text-[11px] font-bold rounded-full transition-all border",
-                                activeBook === 'all'
-                                    ? "bg-amber-100 text-amber-700 border-amber-200"
-                                    : "text-[#787774] border-transparent hover:bg-[#F1F1F0]"
-                            )}
+                    <div className="flex items-center gap-2 border-b border-[#EBEBEB] bg-white px-4 py-3">
+                        <span className="text-xs font-bold text-[#4A4A3A] mr-1">도서 선택:</span>
+                        <select
+                            value={activeBook}
+                            onChange={(e) => setActiveBook(e.target.value)}
+                            className="px-3 py-1.5 text-xs bg-white border border-[#EBEBEB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#EBEBEB] hover:border-gray-300 transition-colors cursor-pointer max-w-[300px]"
                         >
-                            📚 전체 도서
-                        </button>
-                        {books.map((book) => (
-                            <button
-                                key={book.id}
-                                onClick={() => setActiveBook(book.id!)}
-                                className={cn(
-                                    "whitespace-nowrap px-3 py-1.5 text-[11px] font-bold rounded-full transition-all border",
-                                    activeBook === book.id
-                                        ? "bg-blue-100 text-blue-700 border-blue-200"
-                                        : "text-[#787774] border-transparent hover:bg-[#F1F1F0]"
-                                )}
-                            >
-                                {book.title}
-                            </button>
-                        ))}
+                            <option value="all">📚 전체 도서</option>
+                            {books.map((book) => (
+                                <option key={book.id} value={book.id!}>
+                                    {book.title}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                 )}
 
