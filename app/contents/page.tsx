@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import Link from 'next/link';
-import { Layers, FileText, Download, ExternalLink, Filter, Search, Plus, X, Check, BookOpen, Link as LinkIcon, Trash2, MessageCircle, ArrowRight, Image as ImageIcon } from 'lucide-react';
+import { Layers, FileText, Download, ExternalLink, Filter, Search, Plus, X, Check, BookOpen, Link as LinkIcon, Trash2, MessageCircle, ArrowRight, Image as ImageIcon, Edit2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReading, JournalPost, Comment } from '@/lib/store';
 
@@ -784,7 +784,7 @@ export default function ContentsPage() {
                                     </div>
                                     <div className="flex items-center gap-1">
                                         <button onClick={() => handleEdit(m)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="수정">
-                                            <Edit3 size={14} />
+                                            <Edit2 size={14} />
                                         </button>
                                         <button onClick={() => handleDelete(m.id)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors" title="삭제">
                                             <Trash2 size={14} />
@@ -821,7 +821,7 @@ export default function ContentsPage() {
                                             <MessageCircle size={12} /> {m.comments?.length || 0}
                                         </div>
                                         <div className="flex items-center gap-1 text-[10px] font-bold text-[#A1A1A1]">
-                                            <Share2 size={12} /> {m.references?.length || 0}
+                                            <LinkIcon size={12} /> {m.references?.length || 0}
                                         </div>
                                         {(m.files && m.files.length > 0) && (
                                             <button className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors" title="다운로드">
