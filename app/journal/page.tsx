@@ -818,13 +818,14 @@ function JournalPageContent() {
                     />
                 )}
             </div>
-            );
+        </div>
+    );
 }
 
-            export default function JournalPage() {
+export default function JournalPage() {
     return (
-            <Suspense fallback={<div className="p-20 text-center text-[#787774]">로딩 중...</div>}>
-                <JournalPageContent />
-            </Suspense>
-            );
+        <Suspense fallback={<div className="p-20 text-center text-[#787774]">로딩 중...</div>}>
+            <JournalPageContent />
+        </Suspense>
+    );
 }
