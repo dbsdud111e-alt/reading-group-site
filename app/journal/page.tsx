@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, Suspense } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, List, HelpCircle, Heart, Lightbulb, Plus, Edit2, Trash2, X, Check, Image as ImageIcon } from 'lucide-react';
+import { ChevronLeft, List, HelpCircle, Heart, Lightbulb, Plus, Edit2, Trash2, X, Check, Image as ImageIcon, User, Link as LinkIcon, FileText, MessageSquare, BookOpen } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useReading, JournalPost } from '@/lib/store';
@@ -964,7 +964,8 @@ function JournalPageContent() {
                             </div>
                         </div>
                     </div>
-                )}</div>
+                )}
+            </div>
             );
 }
 
