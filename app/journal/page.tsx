@@ -596,18 +596,23 @@ function JournalPageContent() {
                                         </h2>
                                         {!editingPost && (
                                             <div className="flex items-center gap-1">
-                                                {categories
-                                                    .filter(cat => cat.id !== activeCategory)
-                                                    .map(cat => (
+                                                {categories.map(cat => {
+                                                    const isActive = cat.id === activeCategory;
+                                                    return (
                                                         <button
                                                             key={cat.id}
                                                             onClick={() => setActiveCategory(cat.id)}
-                                                            className="px-2.5 py-1.5 text-xs font-medium text-[#A1A1A1] hover:text-[#37352F] hover:bg-[#F1F1F0] rounded-lg transition-all"
+                                                            className={cn(
+                                                                "px-3 py-1.5 text-xs font-medium rounded-lg transition-all",
+                                                                isActive
+                                                                    ? cn("bg-gray-100 text-gray-900 font-bold", cat.color.replace('text-', 'text-').replace('600', '700').replace('gray', 'slate'))
+                                                                    : "text-[#A1A1A1] hover:text-[#37352F] hover:bg-[#F1F1F0]"
+                                                            )}
                                                         >
                                                             {cat.label}
                                                         </button>
-                                                    ))
-                                                }
+                                                    );
+                                                })}
                                             </div>
                                         )}
                                     </div>
