@@ -101,7 +101,18 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
             ]);
 
             if (dbBooks) setBooks(dbBooks);
-            if (dbSchedules) setSchedules(dbSchedules);
+            if (dbSchedules) {
+                // Enrich schedules with book info
+                const enrichedSchedules = dbSchedules.map((s: any) => {
+                    const book = dbBooks?.find(b => b.id === s.book_id);
+                    return {
+                        ...s,
+                        book_title: book?.title,
+                        book_cover: book?.cover_url
+                    };
+                });
+                setSchedules(enrichedSchedules);
+            }
             if (dbPosts) setJournalPosts(dbPosts as any);
             if (dbUsers) {
                 setUsers(dbUsers.map(u => ({
@@ -271,12 +282,15 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
     };
 
     const addSchedule = async (schedule: Omit<Schedule, 'id'>) => {
-        // 1. Try insert WITH user_id (if available)
-        const payload = currentUser ? { ...schedule, user_id: currentUser.id } : schedule;
+        // 1. Prepare payload (remove display-only fields for DB)
+        const { book_title, book_cover, ...dbPayloadBase } = schedule;
+
+        // 2. Try insert WITH user_id (if available)
+        const payload = currentUser ? { ...dbPayloadBase, user_id: currentUser.id } : dbPayloadBase;
 
         let { data, error } = await supabase.from('schedules').insert([payload]).select().single();
 
-        // 2. Fallback: If 'user_id' column missing, try WITHOUT it
+        // 3. Fallback: If 'user_id' column missing, try WITHOUT it
         if (error && error.message?.includes('user_id')) {
             console.warn('addSchedule: user_id column missing, retrying without it.');
             const { user_id, ...payloadWithoutUser } = payload as any;
@@ -287,12 +301,19 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
 
         if (error) {
             console.error('addSchedule failed:', error);
-            alert(`일정 등록 실패: ${error.message}`);
+            // Ignore "column does not exist" for optional fields just in case, but book_cover caused error.
+            if (error.message?.includes('book_cover')) {
+                alert('DB 스키마 불일치: book_cover 컬럼이 없습니다. 개발자에게 문의하세요.');
+            } else {
+                alert(`일정 등록 실패: ${error.message}`);
+            }
             return;
         }
 
         if (data) {
-            setSchedules(prev => [...prev, data]);
+            // Merge with input display fields for local state
+            const newSchedule = { ...data, book_title, book_cover };
+            setSchedules(prev => [...prev, newSchedule]);
         }
     };
 
