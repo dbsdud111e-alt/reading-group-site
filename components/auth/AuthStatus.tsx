@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useReading } from '@/lib/store';
-import { LogIn, User as UserIcon, Loader2 } from 'lucide-react';
+import { LogIn, User as UserIcon, Loader2, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function AuthStatus() {
@@ -14,47 +14,68 @@ export function AuthStatus() {
     const [isUpdating, setIsUpdating] = useState(false);
     const [showProfileSetup, setShowProfileSetup] = useState(false);
     const [authMode, setAuthMode] = useState<'login' | 'signup' | 'idle'>('idle');
+    const [errorMsg, setErrorMsg] = useState<string | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
 
     const handleIdAuth = async (e: React.FormEvent) => {
         e.preventDefault();
+        setErrorMsg(null);
 
         const cleanUserId = userId.trim();
         const cleanNickname = nickname.trim();
+        const cleanMemberNumber = memberNumber.trim();
 
         if (authMode === 'signup') {
             if (!cleanNickname) {
-                alert('닉네임을 입력해 주세요.');
+                setErrorMsg('닉네임을 입력해 주세요.');
                 return;
             }
-            if (memberNumber !== confirmMemberNumber) {
-                alert('회원번호가 일치하지 않습니다.');
+            if (cleanMemberNumber !== confirmMemberNumber.trim()) {
+                setErrorMsg('회원번호가 일치하지 않습니다.');
                 return;
             }
-            if (memberNumber.length < 6) {
-                alert('회원번호는 최소 6자리 이상이어야 합니다.');
+            if (cleanMemberNumber.length < 6) {
+                setErrorMsg('회원번호는 최소 6자리 이상이어야 합니다.');
                 return;
             }
         }
 
         setIsUpdating(true);
+
+        // Failsafe: Force unlock after 5 seconds no matter what
+        const unlockTimer = setTimeout(() => {
+            setIsUpdating(false);
+        }, 5000);
+
         try {
             if (authMode === 'login') {
-                const { error } = await signInWithId(cleanUserId, memberNumber);
+                const { error } = await signInWithId(cleanUserId, cleanMemberNumber);
+
                 if (error) throw error;
+
+                setAuthMode('idle');
+                setUserId('');
+                setMemberNumber('');
+                setConfirmMemberNumber('');
             } else {
-                const { error } = await signUpWithId(cleanUserId, memberNumber, cleanNickname);
+                const { error } = await signUpWithId(cleanUserId, cleanMemberNumber, cleanNickname);
+
                 if (error) throw error;
                 alert('회원가입이 완료되었습니다! 이제 로그인해 주세요.');
                 setAuthMode('login');
+                setUserId(''); // Clear ID for fresh login? Or keep it? keeping it is better UX usually, but clearing ensures safety. Let's keep ID, clear PW.
+                // Actually user might want to login with just created ID. Let's keep ID.
+                // setUserId(''); 
                 setMemberNumber('');
                 setConfirmMemberNumber('');
             }
-            if (authMode === 'login') {
-                setAuthMode('idle');
-            }
         } catch (err: any) {
-            alert(err.message || '인증 중 오류가 발생했습니다. 아이디나 번호를 확인해 주세요.');
+            console.error('Auth Error:', err);
+            let message = err.message || '인증 중 오류가 발생했습니다.';
+            if (message === 'Invalid login credentials') message = '아이디나 비밀번호가 올바르지 않습니다.';
+            setErrorMsg(message);
         } finally {
+            clearTimeout(unlockTimer);
             setIsUpdating(false);
         }
     };
@@ -121,14 +142,23 @@ export function AuthStatus() {
                         </div>
                         <div>
                             <label className="text-[10px] text-[#A1A1A1] mb-1 block">회원번호 (비밀번호)</label>
-                            <input
-                                type="password"
-                                value={memberNumber}
-                                onChange={(e) => setMemberNumber(e.target.value)}
-                                placeholder="번호 입력 (6자리 이상)"
-                                className="w-full px-3 py-2 text-sm border border-[#EBEBEB] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/10"
-                                required
-                            />
+                            <div className="relative">
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    value={memberNumber}
+                                    onChange={(e) => setMemberNumber(e.target.value)}
+                                    placeholder="번호 입력 (6자리 이상)"
+                                    className="w-full px-3 py-2 text-sm border border-[#EBEBEB] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/10 pr-10"
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A1A1A1] hover:text-[#37352F]"
+                                >
+                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
+                            </div>
                         </div>
                         {authMode === 'signup' && (
                             <div>
@@ -143,6 +173,13 @@ export function AuthStatus() {
                                 />
                             </div>
                         )}
+
+                        {errorMsg && (
+                            <div className="bg-rose-50 text-rose-500 text-xs font-bold p-3 rounded-lg flex items-center gap-2 mb-3 animate-pulse">
+                                <span>⚠️ {errorMsg}</span>
+                            </div>
+                        )}
+
                         <button
                             type="submit"
                             disabled={isUpdating}
@@ -156,13 +193,19 @@ export function AuthStatus() {
                             onClick={() => {
                                 setAuthMode(authMode === 'login' ? 'signup' : 'login');
                                 setConfirmMemberNumber('');
+                                setErrorMsg(null);
+                                setUserId(''); // Clear ID when switching modes to avoid confusion
+                                setMemberNumber('');
                             }}
                             className="text-[11px] text-[#787774] hover:text-[#37352F] hover:underline"
                         >
                             {authMode === 'login' ? '아이디가 없으신가요? 회원가입' : '이미 아이디가 있나요? 로그인'}
                         </button>
                         <button
-                            onClick={() => setAuthMode('idle')}
+                            onClick={() => {
+                                setAuthMode('idle');
+                                setErrorMsg(null);
+                            }}
                             className="text-[11px] text-[#787774] hover:text-[#37352F]"
                         >
                             뒤로가기
@@ -175,7 +218,12 @@ export function AuthStatus() {
         return (
             <div className="space-y-2">
                 <button
-                    onClick={() => setAuthMode('login')}
+                    onClick={() => {
+                        setAuthMode('login');
+                        setErrorMsg(null);
+                        setUserId('');
+                        setMemberNumber('');
+                    }}
                     className="flex items-center gap-2 w-full px-3 py-2.5 text-[#37352F] border border-[#EBEBEB] hover:bg-[#F1F1F0] rounded-lg transition-colors text-sm font-medium bg-white"
                 >
                     <LogIn size={18} />

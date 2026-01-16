@@ -80,103 +80,103 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
     const [globalFilterTags, setGlobalFilterTags] = useState<string[]>([]);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const isFetching = React.useRef(false);
 
     const loadInitialData = async () => {
+        if (isFetching.current) return;
+        isFetching.current = true;
+
         try {
-            // Fetch Books
-            const { data: dbBooks } = await supabase.from('books').select('*').order('created_at', { ascending: false });
+            // Fetch essentials first, limit journals to 40 to prevent hang
+            const [
+                { data: dbBooks },
+                { data: dbSchedules },
+                { data: dbPosts },
+                { data: dbUsers }
+            ] = await Promise.all([
+                supabase.from('books').select('*').order('created_at', { ascending: false }),
+                supabase.from('schedules').select('*'),
+                supabase.from('journals').select('*, comments(*)').order('created_at', { ascending: false }).limit(20),
+                supabase.from('users').select('id, display_name, avatar_url').limit(50)
+            ]);
+
             if (dbBooks) setBooks(dbBooks);
-
-            // Fetch Schedules
-            const { data: dbSchedules } = await supabase.from('schedules').select('*');
             if (dbSchedules) setSchedules(dbSchedules);
-
-            // Fetch Journal Posts with Comments
-            const { data: dbPosts } = await supabase
-                .from('journals')
-                .select('*, comments(*)')
-                .order('created_at', { ascending: false });
             if (dbPosts) setJournalPosts(dbPosts as any);
-
-            // Fetch Registered Users
-            const { data: dbUsers } = await supabase.from('users').select('*');
             if (dbUsers) {
                 setUsers(dbUsers.map(u => ({
                     id: u.id,
                     name: u.display_name || '익명',
                     avatar_url: u.avatar_url,
-                    email: u.email
                 })));
             }
         } catch (err) {
             console.error('Initial fetch failed:', err);
+        } finally {
+            isFetching.current = false;
+            // setIsLoading(false); // Removed as it's handled by auth state or initial check
         }
     };
 
     const fetchProfile = async (supabaseUser: SupabaseUser) => {
-        try {
-            const { data, error } = await supabase
-                .from('users')
-                .select('*')
-                .eq('id', supabaseUser.id)
-                .single();
+        // Step 1: Set basic info IMMEDIATELY (Non-blocking)
+        const initialUser = {
+            id: supabaseUser.id,
+            name: supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || '익명',
+            avatar_url: supabaseUser.user_metadata?.avatar_url,
+            email: supabaseUser.email
+        };
+        setCurrentUser(initialUser);
+        setIsLoading(false);
 
-            if (data) {
-                setCurrentUser({
-                    id: data.id,
-                    name: data.display_name || supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || '',
-                    avatar_url: data.avatar_url || supabaseUser.user_metadata?.avatar_url,
-                    email: supabaseUser.email
-                });
-            } else {
-                // Auto-create profile on first login for DB integrity
-                const initialProfile = {
-                    id: supabaseUser.id,
-                    display_name: supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || '익명',
-                    avatar_url: supabaseUser.user_metadata?.avatar_url,
-                    role: 'teacher'
-                };
-
-                // Don't wait for insert, do it in background
-                supabase.from('users').insert([initialProfile]).then(() => {
-                    loadInitialData(); // Refresh users list after insert
-                });
-
-                setCurrentUser({
-                    id: supabaseUser.id,
-                    name: initialProfile.display_name,
-                    avatar_url: initialProfile.avatar_url,
-                    email: supabaseUser.email
-                });
-            }
-        } catch (err) {
-            console.error('Error fetching profile:', err);
-        } finally {
-            setIsLoading(false);
-        }
+        // Step 2: Background profile/DB check (Don't await it!)
+        supabase.from('users').select('display_name, avatar_url').eq('id', supabaseUser.id).maybeSingle()
+            .then(({ data }) => {
+                if (data) {
+                    setCurrentUser(prev => prev ? {
+                        ...prev,
+                        name: data.display_name || prev.name,
+                        avatar_url: data.avatar_url || prev.avatar_url
+                    } : null);
+                } else {
+                    // Create profile if missing
+                    supabase.from('users').insert([{
+                        id: supabaseUser.id,
+                        display_name: initialUser.name,
+                        avatar_url: initialUser.avatar_url,
+                        role: 'teacher'
+                    }]).then(() => loadInitialData());
+                }
+            })
+            .catch(err => console.error('BG Profile Fetch Error:', err));
     };
 
     useEffect(() => {
-        // Load data in background, don't block UI
+        let isMounted = true;
+
+        // Load data in background immediately
         loadInitialData();
 
-        // Set a safety timeout to ensure loading doesn't hang (reduced to 2 seconds)
-        const loadingTimeout = setTimeout(() => {
-            setIsLoading(false);
-        }, 2000);
-
-        // Check active session
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session) {
-                fetchProfile(session.user).catch(() => {
+        // One-time session check
+        const checkInitialSession = async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session && isMounted) {
+                    fetchProfile(session.user);
+                } else if (isMounted) {
                     setIsLoading(false);
-                });
-            } else {
-                setIsLoading(false);
+                }
+            } catch (err) {
+                if (isMounted) setIsLoading(false);
             }
-        }).catch(() => {
-            setIsLoading(false);
-        });
+        };
+
+        checkInitialSession();
+
+        // Safety timeout (reduced to 500ms for even faster feel)
+        const loadingTimeout = setTimeout(() => {
+            if (isMounted) setIsLoading(false);
+        }, 500);
 
         // REALTIME SUBSCRIPTIONS
         const journalsChannel = supabase
@@ -188,19 +188,21 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => loadInitialData())
             .subscribe();
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-            if (session) {
-                await fetchProfile(session.user).catch(() => {
-                    setIsLoading(false);
-                });
-                loadInitialData();
-            } else {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (session && isMounted) {
+                if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+                    fetchProfile(session.user);
+                    // Only load data if not already loading
+                    if (!isFetching.current) loadInitialData();
+                }
+            } else if (event === 'SIGNED_OUT' && isMounted) {
                 setCurrentUser(null);
+                setIsLoading(false);
             }
-            setIsLoading(false);
         });
 
         return () => {
+            isMounted = false;
             clearTimeout(loadingTimeout);
             subscription.unsubscribe();
             supabase.removeChannel(journalsChannel);
@@ -356,46 +358,74 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
         if (error) console.error('Error signing in:', error.message);
     };
 
-    // Simple ID-based login (internally uses gmail format to pass strict validation)
+    // Helper for timeouts
+    const withTimeout = <T,>(promise: Promise<T>, ms: number = 7000): Promise<T> => {
+        return Promise.race([
+            promise,
+            new Promise<T>((_, reject) =>
+                setTimeout(() => reject(new Error('서버 응답 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.')), ms)
+            )
+        ]);
+    };
+
+    // Simple ID-based login with Timeout
     const signInWithId = async (userId: string, memberNumber: string) => {
-        const cleanId = userId.trim().replace(/\s+/g, '').toLowerCase();
-        const internalEmail = `${cleanId}.math@gmail.com`;
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email: internalEmail,
-            password: memberNumber,
-        });
-        return { error };
+        try {
+            const cleanId = userId.trim().replace(/\s+/g, '').toLowerCase();
+            const internalEmail = `${cleanId}.math@gmail.com`;
+
+            // Apply timeout
+            const { error } = await withTimeout(
+                supabase.auth.signInWithPassword({
+                    email: internalEmail,
+                    password: memberNumber,
+                })
+            );
+            return { error };
+        } catch (err) {
+            console.error('Login Exception:', err);
+            return { error: err };
+        }
     };
 
     const signUpWithId = async (userId: string, memberNumber: string, nickname: string) => {
-        const cleanId = userId.trim().replace(/\s+/g, '').toLowerCase();
-        const cleanNickname = nickname.trim();
-        const internalEmail = `${cleanId}.math@gmail.com`;
+        try {
+            const cleanId = userId.trim().replace(/\s+/g, '').toLowerCase();
+            const cleanNickname = nickname.trim();
+            const internalEmail = `${cleanId}.math@gmail.com`;
 
-        // 1. Sign up to Auth
-        const { data, error: authError } = await supabase.auth.signUp({
-            email: internalEmail,
-            password: memberNumber,
-            options: {
-                data: {
-                    full_name: cleanNickname
-                }
+            // 1. Sign up to Auth (with Timeout)
+            const { data, error: authError } = await withTimeout(
+                supabase.auth.signUp({
+                    email: internalEmail,
+                    password: memberNumber,
+                    options: {
+                        data: {
+                            full_name: cleanNickname
+                        }
+                    }
+                })
+            );
+
+            if (authError) return { error: authError };
+
+            // 2. Create profile in users table (with Timeout)
+            if (data.user) {
+                const { error: profileError } = await withTimeout(
+                    supabase.from('users').upsert({
+                        id: data.user.id,
+                        display_name: cleanNickname,
+                        updated_at: new Date().toISOString()
+                    })
+                );
+                if (profileError) console.error('Profile creation error:', profileError.message);
             }
-        });
 
-        if (authError) return { error: authError };
-
-        // 2. Create profile in users table
-        if (data.user) {
-            const { error: profileError } = await supabase.from('users').upsert({
-                id: data.user.id,
-                display_name: cleanNickname,
-                updated_at: new Date().toISOString()
-            });
-            if (profileError) console.error('Profile creation error:', profileError.message);
+            return { error: null };
+        } catch (err: any) {
+            console.error('Signup Exception:', err);
+            return { error: err };
         }
-
-        return { error: null };
     };
 
     const signOut = async () => {

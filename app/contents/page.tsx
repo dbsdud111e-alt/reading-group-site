@@ -198,14 +198,14 @@ export default function ContentsPage() {
             {/* Upload/Edit Modal */}
             {isUploading && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[95vh] overflow-y-auto shadow-2xl">
-                        <div className="p-10">
-                            <div className="flex items-center justify-between mb-8">
-                                <h2 className="text-2xl font-bold text-[#37352F]">{editingPostId ? '자료 수정' : '수업 자료 업로드'}</h2>
-                                <button onClick={resetForm} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                                    <X size={24} className="text-[#A1A1A1]" />
-                                </button>
-                            </div>
+                    <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[95vh] flex flex-col shadow-2xl overflow-hidden">
+                        <div className="p-8 border-b border-[#EBEBEB] flex-none bg-white flex items-center justify-between">
+                            <h2 className="text-2xl font-bold text-[#37352F]">{editingPostId ? '자료 수정' : '수업 자료 업로드'}</h2>
+                            <button onClick={resetForm} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                                <X size={24} className="text-[#A1A1A1]" />
+                            </button>
+                        </div>
+                        <div className="p-10 overflow-y-auto flex-1">
 
                             <div className="space-y-6">
                                 <div>
@@ -461,20 +461,19 @@ export default function ContentsPage() {
             {/* Post Detail Modal */}
             {viewingPostId && viewingPost && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl">
-                        <div className="p-8">
-                            <div className="flex items-center justify-between mb-6">
-                                <span className={cn(
-                                    "px-3 py-1 rounded-full text-[10px] font-bold uppercase",
-                                    viewingPost.material_status === 'draft' ? "bg-gray-100 text-gray-500" : "bg-blue-500 text-white"
-                                )}>
-                                    {viewingPost.material_status === 'draft' ? '아이디어' : '완성본'}
-                                </span>
-                                <button onClick={() => setViewingPostId(null)} className="p-2 hover:bg-gray-100 rounded-full">
-                                    <X size={20} className="text-[#A1A1A1]" />
-                                </button>
-                            </div>
-
+                    <div className="bg-white rounded-3xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+                        <div className="p-8 border-b border-[#EBEBEB] flex-none bg-white flex items-center justify-between">
+                            <span className={cn(
+                                "px-3 py-1 rounded-full text-[10px] font-bold uppercase",
+                                viewingPost.material_status === 'draft' ? "bg-gray-100 text-gray-500" : "bg-blue-500 text-white"
+                            )}>
+                                {viewingPost.material_status === 'draft' ? '아이디어' : '완성본'}
+                            </span>
+                            <button onClick={() => setViewingPostId(null)} className="p-2 hover:bg-gray-100 rounded-full">
+                                <X size={20} className="text-[#A1A1A1]" />
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-8">
                             <h2 className="text-3xl font-bold text-[#37352F] mb-4">{viewingPost.title}</h2>
 
                             <div className="flex items-center gap-4 mb-8 text-sm text-[#787774]">

@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, Plus, X, Edit2, Check, Trash2 } from 'lucide-react';
-import { useReading } from '@/lib/store';
+import { ChevronLeft, Plus, X, Edit2, Check, Trash2, HelpCircle, Lightbulb, List, Heart, User, MessageSquare, BookOpen, FileText, Link as LinkIcon, Send, ImageIcon } from 'lucide-react';
+import { useReading, JournalPost } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { SUBJECT_TAGS } from '@/lib/aladdin/mockApi';
 
@@ -27,6 +27,27 @@ export default function BookDetailPage() {
     const [newSchedules, setNewSchedules] = useState<{ start_date: string; end_date: string; range_text: string; }[]>([
         { start_date: '', end_date: '', range_text: '' }
     ]);
+
+    // Journal/Record states
+    const [isWriting, setIsWriting] = useState(false);
+    const [editingPost, setEditingPost] = useState<string | null>(null);
+    const [viewingPostId, setViewingPostId] = useState<string | null>(null);
+    const [content, setContent] = useState('');
+    const [materialStatus, setMaterialStatus] = useState<'draft' | 'finished'>('draft');
+    const [formMaterialTags, setFormMaterialTags] = useState<string[]>([]);
+    const [links, setLinks] = useState<string[]>(['']);
+    const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+    const editorRef = React.useRef<HTMLDivElement>(null);
+
+    const { users, journalPosts, addJournalPost, updateJournalPost, deleteJournalPost, addComment, deleteComment, materialTags } = useReading();
+    const bookPosts = journalPosts.filter(p => p.book_id === bookId).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    const categories = [
+        { id: 'question', label: '질문', icon: HelpCircle, color: 'text-rose-600' },
+        { id: 'idea', label: '수업 아이디어 및 콘텐츠', icon: Lightbulb, color: 'text-amber-600' },
+        { id: 'memo', label: '메모 및 요약정리', icon: List, color: 'text-gray-600' },
+        { id: 'feeling', label: '느낀점', icon: Heart, color: 'text-green-600' },
+    ];
 
     if (!book) {
         return (
@@ -88,6 +109,65 @@ export default function BookDetailPage() {
             deleteSchedule(scheduleId);
         }
     };
+
+    const handleWriteSubmit = async () => {
+        const editorHtml = editorRef.current?.innerHTML || '';
+        const editorText = editorRef.current?.innerText || '';
+
+        if (!editorText.trim() && !editorHtml.includes('<img')) {
+            alert('내용을 입력해주세요.');
+            return;
+        }
+
+        if (!currentUser) {
+            alert('로그인이 필요합니다.');
+            return;
+        }
+
+        const textLines = editorText.split('\n').filter(l => l.trim() !== '');
+        const extractedTitle = textLines[0]?.trim() || '제목 없음';
+
+        const validLinks = links.filter(link => link.trim() !== '');
+        const fileData = uploadedFiles.map(file => ({ url: URL.createObjectURL(file), name: file.name }));
+
+        if (editingPost) {
+            updateJournalPost(editingPost, {
+                title: extractedTitle,
+                content: editorHtml,
+                links: validLinks.length > 0 ? validLinks : undefined,
+                files: fileData.length > 0 ? fileData : undefined,
+                material_status: materialStatus,
+                material_tags: formMaterialTags,
+            });
+        } else {
+            addJournalPost({
+                id: '',
+                user_id: currentUser.id,
+                book_id: bookId,
+                category: 'memo', // Default for bookshelf record
+                title: extractedTitle,
+                content: editorHtml,
+                links: validLinks.length > 0 ? validLinks : undefined,
+                files: fileData.length > 0 ? fileData : undefined,
+                material_status: materialStatus,
+                material_tags: formMaterialTags,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            });
+        }
+
+        setIsWriting(false);
+        setEditingPost(null);
+        setContent('');
+        setLinks(['']);
+    };
+
+    const getUserName = (userId: string) => {
+        const storeUser = users.find(u => u.id === userId);
+        return storeUser ? storeUser.name : '익명';
+    };
+
+    const { currentUser } = useReading();
 
     return (
         <div className="max-w-[1200px] mx-auto px-6 py-10 md:px-12 md:py-16">
@@ -333,7 +413,157 @@ export default function BookDetailPage() {
                         )}
                     </div>
                 </div>
+
+                {/* Records Section */}
+                <div className="bg-white border border-[#EBEBEB] rounded-xl p-6 mt-8">
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-xl font-bold text-[#37352F]">독서 기록 ({bookPosts.length})</h2>
+                        <button
+                            onClick={() => {
+                                setEditingPost(null);
+                                setContent('');
+                                setMaterialStatus('draft');
+                                setIsWriting(true);
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 bg-[#37352F] text-white rounded-lg text-sm font-bold hover:bg-black transition-all shadow-sm"
+                        >
+                            <Plus size={16} /> 기록 작성
+                        </button>
+                    </div>
+
+                    {bookPosts.length === 0 ? (
+                        <div className="py-12 text-center text-[#A1A1A1] border-2 border-dashed border-[#F1F1F0] rounded-xl">
+                            <p>아직 작성된 기록이 없습니다.</p>
+                            <p className="text-sm mt-2">이 책에 대한 소중한 생각을 남겨보세요.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {bookPosts.map((post) => (
+                                <div key={post.id} className="p-4 bg-[#FBFBFA] border border-[#EBEBEB] rounded-xl hover:shadow-md transition-all cursor-pointer group" onClick={() => setViewingPostId(post.id)}>
+                                    <div className="flex items-start justify-between mb-2">
+                                        <div>
+                                            <h3 className="font-bold text-[#37352F] group-hover:text-blue-600 transition-colors">{post.title}</h3>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className="text-[10px] text-[#A1A1A1]">{new Date(post.created_at).toLocaleDateString()}</span>
+                                                <span className="text-[10px] font-bold text-[#37352F]">{getUserName(post.user_id)}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-1">
+                                            {currentUser?.id === post.user_id && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setEditingPost(post.id);
+                                                        setContent(post.content);
+                                                        setIsWriting(true);
+                                                    }}
+                                                    className="p-1 text-[#A1A1A1] hover:text-blue-500"
+                                                >
+                                                    <Edit2 size={14} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="text-xs text-[#787774] line-clamp-2" dangerouslySetInnerHTML={{ __html: post.content }} />
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
+
+            {/* Write Modal */ }
+    {
+        isWriting && (
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                <div className="w-full max-w-4xl max-h-[90vh] bg-[#FFFEF9] rounded-[32px] shadow-2xl overflow-y-auto p-8 md:p-12 relative">
+                    <div className="flex items-center justify-between mb-8 pb-4 border-b border-[#F5E6D3]">
+                        <h2 className="text-2xl font-black text-[#37352F]">{editingPost ? '기록 수정' : '새로운 독서 기록'}</h2>
+                        <button onClick={() => setIsWriting(false)} className="p-2 hover:bg-rose-50 rounded-xl text-rose-500 transition-all">
+                            <X size={24} />
+                        </button>
+                    </div>
+
+                    <div
+                        ref={editorRef}
+                        contentEditable
+                        onInput={(e) => setContent(e.currentTarget.innerHTML)}
+                        className="w-full min-h-[300px] max-h-[500px] bg-white border border-[#F5E6D3] rounded-2xl px-6 py-8 focus:outline-none transition-all rich-editor text-lg leading-relaxed text-[#37352F] shadow-inner overflow-y-auto mb-8"
+                        style={{ outline: 'none' }}
+                        dangerouslySetInnerHTML={editingPost ? { __html: content } : undefined}
+                    />
+
+                    <div className="flex gap-4">
+                        <button
+                            onClick={() => setIsWriting(false)}
+                            className="flex-1 py-4 bg-white text-[#787774] rounded-2xl text-sm font-bold border border-[#EBEBEB] hover:bg-[#F9F9F8] transition-all"
+                        >
+                            취소
+                        </button>
+                        <button
+                            onClick={handleWriteSubmit}
+                            className="flex-[2] py-4 bg-[#37352F] text-white rounded-2xl text-sm font-bold hover:bg-black transition-all shadow-lg flex items-center justify-center gap-2"
+                        >
+                            <Check size={18} /> 완료하기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    {/* View Modal */ }
+    {
+        viewingPostId && (
+            <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                <div className="w-full max-w-4xl max-h-[90vh] bg-[#FFFEF9] rounded-[32px] shadow-2xl overflow-y-auto p-8 md:p-12 relative">
+                    {(() => {
+                        const post = journalPosts.find(p => p.id === viewingPostId);
+                        if (!post) return null;
+
+                        return (
+                            <>
+                                <div className="flex items-center justify-between mb-8 pb-4 border-b border-[#F5E6D3]">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-50 text-blue-600 rounded">독서 기록</span>
+                                        {post.material_status && (
+                                            <span className={cn(
+                                                "text-[10px] font-bold px-2 py-0.5 rounded",
+                                                post.material_status === 'draft' ? "bg-amber-50 text-amber-600" : "bg-green-50 text-green-600"
+                                            )}>
+                                                {post.material_status === 'draft' ? '아이디어' : '완성본'}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <button onClick={() => setViewingPostId(null)} className="p-2 hover:bg-gray-100 rounded-xl">
+                                        <X size={24} />
+                                    </button>
+                                </div>
+                                <h2 className="text-3xl font-black text-[#37352F] mb-6">{post.title}</h2>
+                                <div className="text-lg text-[#37352F] mb-12 rich-content leading-relaxed" dangerouslySetInnerHTML={{ __html: post.content }} />
+
+                                <div className="bg-[#FFFCF5] rounded-[32px] border border-[#F5E6D3] p-8">
+                                    <h3 className="font-bold mb-4">댓글 {post.comments?.length || 0}</h3>
+                                    <div className="space-y-3">
+                                        {post.comments?.map(comment => (
+                                            <div key={comment.id} className="bg-white p-4 rounded-xl border border-[#F5E6D3]">
+                                                <div className="flex justify-between text-[10px] font-bold mb-1">
+                                                    <span>{getUserName(comment.user_id)}</span>
+                                                    <span className="text-[#A1A1A1]">{new Date(comment.created_at).toLocaleDateString()}</span>
+                                                </div>
+                                                <p className="text-sm">{comment.content}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </>
+                        );
+                    })()}
+                </div>
+            </div>
+        )
+    }
+        </div >
     );
 }
