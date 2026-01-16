@@ -10,8 +10,10 @@ export default function AdminPage() {
     const [isResetting, setIsResetting] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
-    // Check if current user is admin (you can set this in Supabase users table)
-    const isAdmin = currentUser?.email === 'admin@math-reading.com' || currentUser?.id === 'admin';
+    // Check if current user is admin
+    const isAdmin = currentUser?.email === 'admin@math-reading.com' ||
+        currentUser?.email === 'admin.math@gmail.com' ||
+        currentUser?.id === 'admin';
 
     const handleResetPassword = async (userId: string, userEmail: string) => {
         if (!confirm('이 사용자의 비밀번호를 123456으로 초기화하시겠습니까?')) return;
