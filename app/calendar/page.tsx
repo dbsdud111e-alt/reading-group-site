@@ -87,7 +87,10 @@ export default function CalendarPage() {
                             ))}
                             {days.map((day) => {
                                 const daySchedules = getSchedulesForDate(day);
-                                const isToday = day === 12;
+                                const currentData = new Date();
+                                const isToday = day === currentData.getDate() &&
+                                    currentData.getMonth() === 0 && // January (0-indexed)
+                                    currentData.getFullYear() === 2026;
                                 return (
                                     <div
                                         key={day}
