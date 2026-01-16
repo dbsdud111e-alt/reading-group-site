@@ -592,7 +592,7 @@ export default function ContentsPage() {
                             <div className="pt-8 border-t border-[#F1F1F0] grid grid-cols-1 md:grid-cols-2 gap-8">
                                 <div>
                                     <h4 className="text-[11px] font-bold text-[#A1A1A1] mb-3 flex items-center gap-1.5 uppercase tracking-wider">
-                                        <Share2 size={12} /> 참고한 자료
+                                        <LinkIcon size={12} /> 참고한 자료
                                     </h4>
                                     <div className="space-y-1.5">
                                         {viewingPost.references && viewingPost.references.length > 0 ? (
