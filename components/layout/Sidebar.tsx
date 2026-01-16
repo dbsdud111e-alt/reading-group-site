@@ -37,7 +37,9 @@ export function Sidebar() {
     const { books, journalPosts, currentUser } = useReading();
 
     // Check if current user is admin
-    const isAdmin = currentUser?.email === 'admin@math-reading.com' || currentUser?.id === 'admin';
+    const isAdmin = currentUser?.email === 'admin@math-reading.com' ||
+        currentUser?.email === 'admin.math@gmail.com' || // Corresponds to ID: admin
+        currentUser?.id === 'admin';
 
     const filteredBooks = books.filter(b =>
         b.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
