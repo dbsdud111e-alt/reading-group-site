@@ -32,6 +32,10 @@ function JournalPageContent() {
     const [editingUserName, setEditingUserName] = useState<string | null>(null);
     const [tempUserName, setTempUserName] = useState('');
 
+    useEffect(() => {
+        setActiveBook(initialBookId || 'all');
+    }, [initialBookId]);
+
     // Form states
     const [content, setContent] = useState('');
     const [materialStatus, setMaterialStatus] = useState<'draft' | 'finished'>('draft');
