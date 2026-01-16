@@ -239,7 +239,7 @@ function JournalPageContent() {
                 </Link>
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                     <div className="flex-1">
-                        <h1 className="text-4xl font-bold text-[#37352F] mb-2">기록하기</h1>
+                        <h1 className="text-4xl font-bold text-[#37352F] mb-2">{initialBookId ? getBookTitle(initialBookId) : '기록하기'}</h1>
                         <p className="text-[#787774]">함께 읽은 책에 대한 생각과 아이디어를 공유하세요.</p>
                     </div>
                     {currentUser && (
@@ -325,33 +325,35 @@ function JournalPageContent() {
                 )}
 
                 {/* Book Filter Tabs */}
-                <div className="flex flex-wrap items-center gap-2 border-b border-[#EBEBEB] bg-white px-4 py-2 overflow-x-auto no-scrollbar">
-                    <button
-                        onClick={() => setActiveBook('all')}
-                        className={cn(
-                            "whitespace-nowrap px-3 py-1.5 text-[11px] font-bold rounded-full transition-all border",
-                            activeBook === 'all'
-                                ? "bg-amber-100 text-amber-700 border-amber-200"
-                                : "text-[#787774] border-transparent hover:bg-[#F1F1F0]"
-                        )}
-                    >
-                        📚 전체 도서
-                    </button>
-                    {books.map((book) => (
+                {!initialBookId && (
+                    <div className="flex flex-wrap items-center gap-2 border-b border-[#EBEBEB] bg-white px-4 py-2 overflow-x-auto no-scrollbar">
                         <button
-                            key={book.id}
-                            onClick={() => setActiveBook(book.id!)}
+                            onClick={() => setActiveBook('all')}
                             className={cn(
                                 "whitespace-nowrap px-3 py-1.5 text-[11px] font-bold rounded-full transition-all border",
-                                activeBook === book.id
-                                    ? "bg-blue-100 text-blue-700 border-blue-200"
+                                activeBook === 'all'
+                                    ? "bg-amber-100 text-amber-700 border-amber-200"
                                     : "text-[#787774] border-transparent hover:bg-[#F1F1F0]"
                             )}
                         >
-                            {book.title}
+                            📚 전체 도서
                         </button>
-                    ))}
-                </div>
+                        {books.map((book) => (
+                            <button
+                                key={book.id}
+                                onClick={() => setActiveBook(book.id!)}
+                                className={cn(
+                                    "whitespace-nowrap px-3 py-1.5 text-[11px] font-bold rounded-full transition-all border",
+                                    activeBook === book.id
+                                        ? "bg-blue-100 text-blue-700 border-blue-200"
+                                        : "text-[#787774] border-transparent hover:bg-[#F1F1F0]"
+                                )}
+                            >
+                                {book.title}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
                 {/* Category Filter Tabs */}
                 <div className="flex border-b border-[#EBEBEB] bg-white overflow-x-auto no-scrollbar">

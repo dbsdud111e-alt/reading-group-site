@@ -271,8 +271,27 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
     };
 
     const addSchedule = async (schedule: Omit<Schedule, 'id'>) => {
-        const { data, error } = await supabase.from('schedules').insert([schedule]).select().single();
-        if (!error && data) {
+        // 1. Try insert WITH user_id (if available)
+        const payload = currentUser ? { ...schedule, user_id: currentUser.id } : schedule;
+
+        let { data, error } = await supabase.from('schedules').insert([payload]).select().single();
+
+        // 2. Fallback: If 'user_id' column missing, try WITHOUT it
+        if (error && error.message?.includes('user_id')) {
+            console.warn('addSchedule: user_id column missing, retrying without it.');
+            const { user_id, ...payloadWithoutUser } = payload as any;
+            const retry = await supabase.from('schedules').insert([payloadWithoutUser]).select().single();
+            data = retry.data;
+            error = retry.error;
+        }
+
+        if (error) {
+            console.error('addSchedule failed:', error);
+            alert(`일정 등록 실패: ${error.message}`);
+            return;
+        }
+
+        if (data) {
             setSchedules(prev => [...prev, data]);
         }
     };

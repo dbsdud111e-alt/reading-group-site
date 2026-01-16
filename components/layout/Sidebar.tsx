@@ -22,6 +22,7 @@ import { AuthStatus } from '../auth/AuthStatus';
 const navItems = [
     { name: '대시보드', href: '/', icon: Home },
     { name: '서재', href: '/books', icon: BookOpen },
+    { name: '전체 독서기록장', href: '/journal', icon: FileText },
     { name: '캘린더', href: '/calendar', icon: Calendar },
     { name: '수업 자료', href: '/contents', icon: Layers },
     { name: '관리자', href: '/admin', icon: Shield, adminOnly: true },
