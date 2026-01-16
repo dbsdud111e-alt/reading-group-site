@@ -222,6 +222,7 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
 
         const { data, error } = await supabase.from('books').insert([{
             ...newBook,
+            user_id: currentUser.id,
             created_at: new Date().toISOString()
         }]).select().single();
 
