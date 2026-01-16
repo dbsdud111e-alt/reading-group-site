@@ -38,6 +38,7 @@ function JournalPageContent() {
     const [formMaterialTags, setFormMaterialTags] = useState<string[]>([]);
     const [links, setLinks] = useState<string[]>(['']);
     const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+    const [newTagInput, setNewTagInput] = useState('');
     const [uploadedImages, setUploadedImages] = useState<{ file: File; preview: string }[]>([]);
     const editorRef = useRef<HTMLDivElement>(null);
 
@@ -733,6 +734,44 @@ function JournalPageContent() {
                                                                             </button>
                                                                         </div>
                                                                     ))}
+
+                                                                    {/* Add New Tag */}
+                                                                    <div className="flex items-center gap-2">
+                                                                        <input
+                                                                            type="text"
+                                                                            value={newTagInput}
+                                                                            onChange={(e) => setNewTagInput(e.target.value)}
+                                                                            onKeyDown={(e) => {
+                                                                                if (e.key === 'Enter') {
+                                                                                    e.preventDefault();
+                                                                                    if (newTagInput.trim()) {
+                                                                                        addMaterialTag(newTagInput.trim());
+                                                                                        if (!formMaterialTags.includes(newTagInput.trim())) {
+                                                                                            setFormMaterialTags(prev => [...prev, newTagInput.trim()]);
+                                                                                        }
+                                                                                        setNewTagInput('');
+                                                                                    }
+                                                                                }
+                                                                            }}
+                                                                            placeholder="새 태그..."
+                                                                            className="w-24 px-3 py-2 text-xs bg-white border border-[#EBEBEB] rounded-xl focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                                        />
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                if (newTagInput.trim()) {
+                                                                                    addMaterialTag(newTagInput.trim());
+                                                                                    if (!formMaterialTags.includes(newTagInput.trim())) {
+                                                                                        setFormMaterialTags(prev => [...prev, newTagInput.trim()]);
+                                                                                    }
+                                                                                    setNewTagInput('');
+                                                                                }
+                                                                            }}
+                                                                            className="px-3 py-2 bg-[#F1F1F0] text-[#787774] text-xs font-bold rounded-xl hover:bg-[#37352F] hover:text-white transition-all"
+                                                                        >
+                                                                            +
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </>
