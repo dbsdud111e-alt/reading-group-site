@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, X, Edit2, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Edit2, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReading } from '@/lib/store';
 import { Schedule } from '@/types';
