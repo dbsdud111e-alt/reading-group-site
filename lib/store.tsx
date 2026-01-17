@@ -405,9 +405,16 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
     };
 
     const deleteJournalPost = async (id: string) => {
+        const postToDelete = journalPosts.find(p => p.id === id);
+
         const { error } = await supabase.from('journals').delete().eq('id', id);
         if (!error) {
             setJournalPosts(prev => prev.filter(p => p.id !== id));
+
+            // Deduct 1 point when a post is deleted
+            if (postToDelete) {
+                updatePoints(postToDelete.user_id, -1);
+            }
         }
     };
 
