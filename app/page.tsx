@@ -159,7 +159,10 @@ export default function DashboardPage() {
                       </span>
                     </div>
                     <h4 className="font-bold text-[#37352F] mb-2">{post.title}</h4>
-                    <p className="text-sm text-[#787774] line-clamp-2 leading-relaxed">{post.content}</p>
+                    <p
+                      className="text-sm text-[#787774] line-clamp-2 leading-relaxed"
+                      dangerouslySetInnerHTML={{ __html: post.content.replace(/<[^>]+>/g, '') }}
+                    />
                   </Link>
                 ))
               ) : (

@@ -44,7 +44,11 @@ function JournalPageContent() {
     const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
     const [newTagInput, setNewTagInput] = useState('');
     const [uploadedImages, setUploadedImages] = useState<{ file: File; preview: string }[]>([]);
+    const [initialContentSnapshot, setInitialContentSnapshot] = useState('');
     const editorRef = useRef<HTMLDivElement>(null);
+
+    // useEffect removed - handled by RichEditor
+
 
     const currentPosts = journalPosts.filter(p => {
         const matchesCategory = activeCategory === 'all' || p.category === activeCategory;
@@ -192,6 +196,7 @@ function JournalPageContent() {
         }
         setFormMaterialTags(post.material_tags || []);
         setActiveUser(post.user_id);
+        setInitialContentSnapshot(initialHtml);
         setIsWriting(true);
     };
 
@@ -250,6 +255,8 @@ function JournalPageContent() {
                         <button
                             onClick={() => {
                                 if (activeCategory === 'all') setActiveCategory('memo');
+                                setContent('');
+                                setInitialContentSnapshot('');
                                 setIsWriting(true);
                             }}
                             className="flex items-center gap-2 px-6 py-3 bg-[#37352F] text-white rounded-xl font-bold hover:bg-black transition-all shadow-lg hover:shadow-[#37352F]/20 active:scale-[0.98]"
@@ -621,6 +628,7 @@ function JournalPageContent() {
                                             setIsWriting(false);
                                             setEditingPost(null);
                                             setContent('');
+                                            setInitialContentSnapshot('');
                                             setLinks(['']);
                                             setUploadedFiles([]);
                                         }}
@@ -653,33 +661,12 @@ function JournalPageContent() {
 
                                     {/* Editor Content */}
                                     <div className="mb-10">
-                                        <div
+                                        <RichEditor
                                             ref={editorRef}
-                                            contentEditable
-                                            onInput={(e) => setContent(e.currentTarget.innerHTML)}
-                                            data-placeholder="내용을 자유롭게 적어주세요..."
-                                            className="w-full min-h-[300px] max-h-[500px] bg-white border border-[#F5E6D3] rounded-2xl px-6 py-8 focus:outline-none transition-all rich-editor text-lg leading-relaxed text-[#37352F] shadow-inner overflow-y-auto"
-                                            style={{ outline: 'none' }}
-                                            dangerouslySetInnerHTML={editingPost ? { __html: content } : undefined}
+                                            initialContent={initialContentSnapshot}
+                                            onChange={setContent}
+                                            placeholder="내용을 자유롭게 적어주세요..."
                                         />
-                                        <style jsx>{`
-                                        .rich-editor:empty:before {
-                                            content: attr(data-placeholder);
-                                            color: #D1D1D1;
-                                            cursor: text;
-                                            font-size: 1.5rem;
-                                            font-weight: 700;
-                                        }
-                                        .rich-content img, .rich-editor img {
-                                            display: block;
-                                            max-width: 60% !important;
-                                            height: auto !important;
-                                            border-radius: 16px;
-                                            margin: 24px auto !important;
-                                            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
-                                            border: 1px solid #F5E6D3;
-                                        }
-                                    `}</style>
                                     </div>
 
                                     {/* Footer Sidebar-style Metadata Area */}
@@ -858,7 +845,69 @@ function JournalPageContent() {
             </div>
         </div>
     );
+    );
 }
+
+// Separate RichEditor component to prevent re-renders causing cursor jumps
+const RichEditor = React.memo(React.forwardRef<HTMLDivElement, { initialContent: string, onChange: (html: string) => void, placeholder: string }>(
+    ({ initialContent, onChange, placeholder }, ref) => {
+        const internalRef = useRef<HTMLDivElement>(null);
+
+        // Merge refs
+        useEffect(() => {
+            if (typeof ref === 'function') {
+                ref(internalRef.current);
+            } else if (ref) {
+                ref.current = internalRef.current;
+            }
+        }, [ref]);
+
+        // Only set initial HTML once when mounted (or when initialContent prop truly changes implies reset)
+        useEffect(() => {
+            if (internalRef.current) {
+                internalRef.current.innerHTML = initialContent;
+            }
+            // We intentionally only run this when initialContent changes (which should be stable during edit)
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [initialContent]);
+
+        <>
+            <div
+                ref={internalRef}
+                contentEditable
+                suppressContentEditableWarning
+                onInput={(e) => onChange(e.currentTarget.innerHTML)}
+                data-placeholder={placeholder}
+                className="w-full min-h-[300px] max-h-[500px] bg-white border border-[#F5E6D3] rounded-2xl px-6 py-8 focus:outline-none transition-all rich-editor text-lg leading-relaxed text-[#37352F] shadow-inner overflow-y-auto"
+                style={{ outline: 'none' }}
+            />
+            <style jsx>{`
+                    .rich-editor:empty:before {
+                        content: attr(data-placeholder);
+                        color: #D1D1D1;
+                        cursor: text;
+                        font-size: 1.5rem;
+                        font-weight: 700;
+                    }
+                    .rich-content img, .rich-editor img {
+                        display: block;
+                        max-width: 60% !important;
+                        height: auto !important;
+                        border-radius: 16px;
+                        margin: 24px auto !important;
+                        box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+                        border: 1px solid #F5E6D3;
+                    }
+                `}</style>
+        </>
+        );
+    }
+), (prev, next) => {
+    // Custom comparison to absolutely prevent re-renders unless initialContent changes
+    // We ignore onChange, placeholder, and ref changes as they should be stable or irrelevant for re-rendering DOM
+    return prev.initialContent === next.initialContent;
+});
+RichEditor.displayName = 'RichEditor';
 
 export default function JournalPage() {
     return (

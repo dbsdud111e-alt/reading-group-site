@@ -15,7 +15,7 @@ import {
     Search,
     Shield,
     FileText,
-    User,
+    User as UserIcon,
     Menu,
     X
 } from 'lucide-react';
@@ -27,12 +27,13 @@ const navItems = [
     { name: '대시보드', href: '/', icon: Home },
     { name: '서재', href: '/books', icon: BookOpen },
     { name: '전체 독서기록장', href: '/journal', icon: FileText },
-    { name: '마이 페이지', href: '/my', icon: User },
+    { name: '마이 페이지', href: '/my', icon: UserIcon },
     { name: '캘린더', href: '/calendar', icon: Calendar },
     { name: '수업 자료', href: '/contents', icon: Layers },
     { name: '관리자', href: '/admin', icon: Shield, adminOnly: true },
 ];
 
+// sidebar component
 export function Sidebar() {
     const [collapsed, setCollapsed] = useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
