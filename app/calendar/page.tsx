@@ -252,33 +252,37 @@ export default function CalendarPage() {
 
                                 {/* Horizontal Tracker Strip */}
                                 <div className="flex-1 w-full overflow-x-auto pb-2 md:pb-0">
-                                    <div className="flex items-center gap-3 min-w-max">
+                                    <div className="flex items-center gap-2 min-w-max">
                                         {bookSchedules.map((schedule, idx) => {
                                             const isCompleted = trackerRecords.some(r => r.user_id === currentUser?.id && r.schedule_id === schedule.id);
                                             return (
                                                 <button
                                                     key={schedule.id}
-                                                    onClick={() => toggleTrackerCompletion(schedule.id)}
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        toggleTrackerCompletion(schedule.id);
+                                                    }}
                                                     className={cn(
-                                                        "relative group flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all min-w-[140px] h-[100px]",
+                                                        "relative group flex flex-col items-center justify-center p-2 rounded-lg border-2 transition-all min-w-[100px] h-[80px]",
                                                         isCompleted
-                                                            ? "bg-[#D4EDDA] border-[#C3E6CB] shadow-sm scale-105 z-10" // Pastel Green
+                                                            ? "bg-[#D4EDDA] border-[#C3E6CB] shadow-sm z-10" // Pastel Green
                                                             : "bg-white border-[#EBEBEB] hover:border-blue-300 hover:bg-gray-50 text-[#A1A1A1] hover:text-[#37352F]"
                                                     )}
                                                 >
                                                     {/* Connector Line (visual) - simplified */}
                                                     {idx > 0 && (
                                                         <div className={cn(
-                                                            "absolute left-0 top-1/2 -translate-x-full w-3 h-0.5 pointer-events-none",
+                                                            "absolute left-0 top-1/2 -translate-x-full w-2 h-0.5 pointer-events-none",
                                                             isCompleted ? "bg-[#C3E6CB]" : "bg-[#EBEBEB]"
-                                                        )} style={{ left: '-6px' }} />
+                                                        )} style={{ left: '-4px' }} />
                                                     )}
 
-                                                    <div className="text-[10px] font-bold mb-1 opacity-70">
+                                                    <div className="text-[9px] font-bold mb-0.5 opacity-70">
                                                         ~ {new Date(schedule.end_date).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}
                                                     </div>
                                                     <div className={cn(
-                                                        "text-sm font-bold text-center px-1 break-keep",
+                                                        "text-xs font-bold text-center px-1 break-keep leading-tight",
                                                         isCompleted ? "text-[#155724]" : "text-inherit"
                                                     )}>
                                                         {schedule.range_text}

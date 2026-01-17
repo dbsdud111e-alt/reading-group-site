@@ -532,27 +532,49 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
     };
 
     const toggleTrackerCompletion = async (scheduleId: string) => {
-        if (!currentUser) return;
+        if (!currentUser) {
+            alert("로그인이 필요합니다.");
+            return;
+        }
 
-        // Check availability strictly
         const existingRecord = trackerRecords.find(r => r.user_id === currentUser.id && r.schedule_id === scheduleId);
 
         if (existingRecord) {
-            // Remove
+            // Optimistic Remove
+            setTrackerRecords(prev => prev.filter(r => r.id !== existingRecord.id));
+
             const { error } = await supabase.from('tracker_completions').delete().eq('id', existingRecord.id);
-            if (!error) {
-                setTrackerRecords(prev => prev.filter(r => r.id !== existingRecord.id));
+            if (error) {
+                console.error("Failed to delete tracker record:", error);
+                // Revert
+                setTrackerRecords(prev => [...prev, existingRecord]);
+                alert("삭제에 실패했습니다. 다시 시도해주세요.");
             }
         } else {
-            // Add
+            // Optimistic Add
+            const tempId = `temp-${Date.now()}`;
+            const newRecord: TrackerRecord = {
+                id: tempId,
+                user_id: currentUser.id,
+                schedule_id: scheduleId,
+                completed_at: new Date().toISOString()
+            };
+            setTrackerRecords(prev => [...prev, newRecord]);
+
             const { data, error } = await supabase.from('tracker_completions').insert([{
                 user_id: currentUser.id,
                 schedule_id: scheduleId,
                 completed_at: new Date().toISOString()
             }]).select().single();
 
-            if (!error && data) {
-                setTrackerRecords(prev => [...prev, data as any]);
+            if (error) {
+                console.error("Failed to insert tracker record:", error);
+                // Revert
+                setTrackerRecords(prev => prev.filter(r => r.id !== tempId));
+                alert("저장에 실패했습니다. 다시 시도해주세요.");
+            } else if (data) {
+                // Update temp ID to real ID
+                setTrackerRecords(prev => prev.map(r => r.id === tempId ? (data as any) : r));
             }
         }
     };
