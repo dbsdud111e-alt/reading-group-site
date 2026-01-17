@@ -119,7 +119,13 @@ export default function MyPage() {
                         {currentUser.name?.charAt(0) || '나'}
                     </div>
                     <div>
-                        <h1 className="text-3xl font-bold text-[#37352F] mb-1">{currentUser.name}님의 기록</h1>
+                        <div className="flex items-center gap-3 mb-1">
+                            <h1 className="text-3xl font-bold text-[#37352F]">{currentUser.name}님의 기록</h1>
+                            <div className="flex items-center gap-1.5 px-3 py-1 bg-[#FFF4D9] border border-[#F5E6D3] rounded-full shadow-sm">
+                                <span className="w-2 h-2 rounded-full bg-[#FFB84D]"></span>
+                                <span className="text-sm font-bold text-[#D97706]">{currentUser.points || 0}P</span>
+                            </div>
+                        </div>
                         <p className="text-[#787774] text-sm">
                             총 <span className="font-bold text-[#37352F]">{myPosts.length}</span>개의 활동 내역이 있습니다.
                         </p>

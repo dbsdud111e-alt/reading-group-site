@@ -287,7 +287,13 @@ export function AuthStatus() {
                     </div>
                 )}
                 <div className="flex flex-col min-w-0">
-                    <span className="text-sm font-bold text-[#37352F] truncate">{currentUser.name}</span>
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-[#37352F] truncate">{currentUser.name}</span>
+                        <div className="flex items-center gap-1 px-1.5 py-0.5 bg-[#FFF4D9] border border-[#F5E6D3] rounded-full">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#FFB84D]"></span>
+                            <span className="text-[10px] font-bold text-[#D97706]">{currentUser.points || 0}P</span>
+                        </div>
+                    </div>
                     <button
                         onClick={() => {
                             setNickname(currentUser.name);

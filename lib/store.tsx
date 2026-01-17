@@ -42,6 +42,7 @@ export interface User {
     name: string;
     avatar_url?: string;
     email?: string;
+    points?: number;
 }
 
 interface ReadingContextType {
@@ -109,7 +110,7 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
                 supabase.from('books').select('*').order('created_at', { ascending: false }),
                 supabase.from('schedules').select('*'),
                 supabase.from('journals').select('*, comments(*)').order('created_at', { ascending: false }).limit(20),
-                supabase.from('users').select('id, display_name, avatar_url').limit(50),
+                supabase.from('users').select('*').limit(50),
                 supabase.from('tracker_completions').select('*')
             ]);
 
@@ -132,6 +133,7 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
                     id: u.id,
                     name: u.display_name || '익명',
                     avatar_url: u.avatar_url,
+                    points: u.points || 0
                 })));
             }
             if (dbTrackerRecords) setTrackerRecords(dbTrackerRecords as any);
@@ -156,13 +158,14 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
 
         // Step 2: Background profile/DB check
         try {
-            const { data } = await supabase.from('users').select('display_name, avatar_url').eq('id', supabaseUser.id).maybeSingle();
+            const { data } = await supabase.from('users').select('*').eq('id', supabaseUser.id).maybeSingle();
 
             if (data) {
                 setCurrentUser(prev => prev ? {
                     ...prev,
                     name: data.display_name || prev.name,
-                    avatar_url: data.avatar_url || prev.avatar_url
+                    avatar_url: data.avatar_url || prev.avatar_url,
+                    points: data.points || 0
                 } : null);
             } else {
                 // Create profile if missing
@@ -170,7 +173,8 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
                     id: supabaseUser.id,
                     display_name: initialUser.name,
                     avatar_url: initialUser.avatar_url,
-                    role: 'teacher'
+                    role: 'teacher',
+                    points: 0
                 }]);
                 await loadInitialData();
             }
@@ -242,6 +246,25 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('math-material-tags', JSON.stringify(materialTags));
         localStorage.setItem('math-global-filter-tags', JSON.stringify(globalFilterTags));
     }, [materialTags, globalFilterTags]);
+
+    const updatePoints = async (userId: string, delta: number) => {
+        // Optimistic update
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, points: (u.points || 0) + delta } : u));
+
+        if (currentUser?.id === userId) {
+            setCurrentUser(prev => prev ? { ...prev, points: (prev.points || 0) + delta } : null);
+        }
+
+        try {
+            const { data: user } = await supabase.from('users').select('points').eq('id', userId).single();
+            if (user) {
+                const newPoints = (user.points || 0) + delta;
+                await supabase.from('users').update({ points: newPoints }).eq('id', userId);
+            }
+        } catch (error) {
+            console.error('Error updating points:', error);
+        }
+    };
 
     const addBook = async (newBook: any) => {
         if (!currentUser) {
@@ -366,6 +389,8 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
 
         if (!error && data) {
             setJournalPosts(prev => [data as any, ...prev]);
+            // Add 1 point for creating a post (journal, idea, lesson content)
+            updatePoints(currentUser.id, 1);
         } else if (error) {
             console.error('Error adding post:', error.message);
             alert('게시글 저장 실패: ' + error.message);
@@ -550,6 +575,9 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
                 // Revert
                 setTrackerRecords(prev => [...prev, existingRecord]);
                 alert("삭제에 실패했습니다. 다시 시도해주세요.");
+            } else {
+                // Determine if we should decrease points (removed completion)
+                updatePoints(currentUser.id, -1);
             }
         } else {
             // Optimistic Add
@@ -576,6 +604,8 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
             } else if (data) {
                 // Update temp ID to real ID
                 setTrackerRecords(prev => prev.map(r => r.id === tempId ? (data as any) : r));
+                // Add 1 point for completion
+                updatePoints(currentUser.id, 1);
             }
         }
     };
