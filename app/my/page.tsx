@@ -9,9 +9,11 @@ import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
 export default function MyPage() {
-    const { currentUser, journalPosts, books, addJournalPost, deleteJournalPost } = useReading();
+    const { currentUser, journalPosts, books, addJournalPost, deleteJournalPost, updateJournalPost } = useReading();
     const [activeTab, setActiveTab] = useState<'journal' | 'materials' | 'memo'>('journal');
     const [memoInput, setMemoInput] = useState('');
+    const [editingMemoId, setEditingMemoId] = useState<string | null>(null);
+    const [editingMemoContent, setEditingMemoContent] = useState('');
 
     const handleAddMemo = async () => {
         if (!memoInput.trim() || !currentUser) return;
@@ -31,6 +33,33 @@ export default function MyPage() {
         });
 
         setMemoInput('');
+    };
+
+    const handleStartEdit = (post: any) => {
+        setEditingMemoId(post.id);
+        // Convert <br> back to newlines for editing
+        setEditingMemoContent(post.content.replace(/<br>/g, '\n'));
+    };
+
+    const handleSaveEdit = async (postId: string) => {
+        if (!editingMemoContent.trim()) return;
+
+        const lines = editingMemoContent.trim().split('\n');
+        const title = lines[0].length > 30 ? lines[0].substring(0, 30) + '...' : lines[0];
+
+        await updateJournalPost({
+            id: postId,
+            title: title || '무제 메모',
+            content: editingMemoContent.replace(/\n/g, '<br>')
+        });
+
+        setEditingMemoId(null);
+        setEditingMemoContent('');
+    };
+
+    const handleCancelEdit = () => {
+        setEditingMemoId(null);
+        setEditingMemoContent('');
     };
 
     if (!currentUser) {
@@ -167,7 +196,16 @@ export default function MyPage() {
                     activeTab === 'memo' ? (
                         // Memo Card Style
                         <div key={post.id} className="group relative bg-[#FFFCF5] border border-[#F5E6D3] rounded-xl p-6 hover:shadow-md transition-all duration-300 flex flex-col min-h-[200px] hover:-translate-y-1">
-                            <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                                <button
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        handleStartEdit(post);
+                                    }}
+                                    className="p-1.5 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-lg transition-colors"
+                                >
+                                    <PenLine size={14} />
+                                </button>
                                 <button
                                     onClick={(e) => {
                                         e.preventDefault();
@@ -178,10 +216,35 @@ export default function MyPage() {
                                     <Trash2 size={14} />
                                 </button>
                             </div>
-                            <div
-                                className="flex-1 text-sm text-[#37352F] leading-relaxed whitespace-pre-wrap break-words"
-                                dangerouslySetInnerHTML={{ __html: post.content }}
-                            />
+                            {editingMemoId === post.id ? (
+                                <div className="flex-1 flex flex-col gap-2">
+                                    <textarea
+                                        value={editingMemoContent}
+                                        onChange={(e) => setEditingMemoContent(e.target.value)}
+                                        className="w-full h-full min-h-[120px] bg-white/50 border border-[#F5E6D3] rounded-lg p-3 text-sm focus:outline-none focus:border-[#FFB84D] resize-none"
+                                        autoFocus
+                                    />
+                                    <div className="flex justify-end gap-2">
+                                        <button
+                                            onClick={() => handleCancelEdit()}
+                                            className="px-3 py-1.5 text-xs text-[#787774] hover:bg-black/5 rounded-md transition-colors"
+                                        >
+                                            취소
+                                        </button>
+                                        <button
+                                            onClick={() => handleSaveEdit(post.id)}
+                                            className="px-3 py-1.5 text-xs bg-[#37352F] text-white rounded-md hover:bg-black transition-colors"
+                                        >
+                                            저장
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div
+                                    className="flex-1 text-sm text-[#37352F] leading-relaxed whitespace-pre-wrap break-words"
+                                    dangerouslySetInnerHTML={{ __html: post.content }}
+                                />
+                            )}
                             <div className="mt-4 pt-3 border-t border-[#F5E6D3]/50 flex items-center justify-between text-[10px] text-[#A1A1A1]">
                                 <span>{format(new Date(post.created_at), 'MM.dd a h:mm', { locale: ko })}</span>
                             </div>

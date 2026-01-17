@@ -10,8 +10,9 @@ import { cn } from '@/lib/utils';
 export default function DashboardPage() {
   const { journalPosts, books, schedules, users, currentUser } = useReading();
 
-  // Get most recent posts (all shared posts)
+  // Get most recent posts (all shared posts), excluding private memos
   const recentPosts = [...journalPosts]
+    .filter(p => p.category !== 'memo')
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 4);
 
