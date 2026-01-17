@@ -47,8 +47,7 @@ export default function MyPage() {
         const lines = editingMemoContent.trim().split('\n');
         const title = lines[0].length > 30 ? lines[0].substring(0, 30) + '...' : lines[0];
 
-        await updateJournalPost({
-            id: postId,
+        await updateJournalPost(postId, {
             title: title || '무제 메모',
             content: editingMemoContent.replace(/\n/g, '<br>')
         });
