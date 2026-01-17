@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useReading } from '@/lib/store';
-import { FileText, Layers, BookOpen, Clock, Tag, Plus, Trash2, Save, PenLine } from 'lucide-react';
+import { FileText, Layers, BookOpen, Clock, Tag, Plus, Trash2, Save, PenLine, Maximize2, X } from 'lucide-react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -14,6 +14,7 @@ export default function MyPage() {
     const [memoInput, setMemoInput] = useState('');
     const [editingMemoId, setEditingMemoId] = useState<string | null>(null);
     const [editingMemoContent, setEditingMemoContent] = useState('');
+    const [viewingMemo, setViewingMemo] = useState<any | null>(null);
 
     const handleAddMemo = async () => {
         if (!memoInput.trim() || !currentUser) return;
@@ -41,6 +42,16 @@ export default function MyPage() {
         setEditingMemoContent(post.content.replace(/<br>/g, '\n'));
     };
 
+    const handleOpenMemoModal = (post: any) => {
+        setViewingMemo(post);
+        setEditingMemoContent(post.content.replace(/<br>/g, '\n'));
+    };
+
+    const handleCloseMemoModal = () => {
+        setViewingMemo(null);
+        setEditingMemoContent('');
+    };
+
     const handleSaveEdit = async (postId: string) => {
         if (!editingMemoContent.trim()) return;
 
@@ -53,6 +64,9 @@ export default function MyPage() {
         });
 
         setEditingMemoId(null);
+        if (viewingMemo) {
+            setViewingMemo(null);
+        }
         setEditingMemoContent('');
     };
 
@@ -208,6 +222,15 @@ export default function MyPage() {
                                 <button
                                     onClick={(e) => {
                                         e.preventDefault();
+                                        handleOpenMemoModal(post);
+                                    }}
+                                    className="p-1.5 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                                >
+                                    <Maximize2 size={14} />
+                                </button>
+                                <button
+                                    onClick={(e) => {
+                                        e.preventDefault();
                                         if (confirm('이 메모를 삭제하시겠습니까?')) deleteJournalPost(post.id);
                                     }}
                                     className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
@@ -324,6 +347,45 @@ export default function MyPage() {
                     </div>
                 )
             }
+            {viewingMemo && (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={handleCloseMemoModal}>
+                    <div className="w-full max-w-2xl bg-[#FFFDF5] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-[#F5E6D3] bg-[#FFFDF5]">
+                            <h3 className="font-bold text-lg text-[#37352F] flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-[#FFB84D]"></span>
+                                메모 수정
+                            </h3>
+                            <button onClick={handleCloseMemoModal} className="p-2 text-[#A1A1A1] hover:text-[#37352F] hover:bg-black/5 rounded-lg transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="flex-1 p-6 overflow-hidden">
+                            <textarea
+                                value={editingMemoContent}
+                                onChange={(e) => setEditingMemoContent(e.target.value)}
+                                className="w-full h-full bg-transparent border-none resize-none focus:outline-none text-[#37352F] text-lg leading-relaxed placeholder:text-[#D1D1D1]"
+                                placeholder="내용을 입력하세요..."
+                                autoFocus
+                            />
+                        </div>
+                        <div className="px-6 py-4 border-t border-[#F5E6D3] bg-[#FFFDF5] flex justify-end gap-2">
+                            <button
+                                onClick={handleCloseMemoModal}
+                                className="px-4 py-2 text-sm font-bold text-[#787774] hover:bg-black/5 rounded-lg transition-colors"
+                            >
+                                취소
+                            </button>
+                            <button
+                                onClick={() => handleSaveEdit(viewingMemo.id)}
+                                className="px-4 py-2 text-sm font-bold bg-[#37352F] text-white rounded-lg hover:bg-black transition-colors flex items-center gap-2"
+                            >
+                                <Save size={16} />
+                                저장하기
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div >
     );
 }
