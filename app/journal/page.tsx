@@ -871,17 +871,18 @@ const RichEditor = React.memo(React.forwardRef<HTMLDivElement, { initialContent:
             // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [initialContent]);
 
-        <>
-            <div
-                ref={internalRef}
-                contentEditable
-                suppressContentEditableWarning
-                onInput={(e) => onChange(e.currentTarget.innerHTML)}
-                data-placeholder={placeholder}
-                className="w-full min-h-[300px] max-h-[500px] bg-white border border-[#F5E6D3] rounded-2xl px-6 py-8 focus:outline-none transition-all rich-editor text-lg leading-relaxed text-[#37352F] shadow-inner overflow-y-auto"
-                style={{ outline: 'none' }}
-            />
-            <style jsx>{`
+        return (
+            <>
+                <div
+                    ref={internalRef}
+                    contentEditable
+                    suppressContentEditableWarning
+                    onInput={(e) => onChange(e.currentTarget.innerHTML)}
+                    data-placeholder={placeholder}
+                    className="w-full min-h-[300px] max-h-[500px] bg-white border border-[#F5E6D3] rounded-2xl px-6 py-8 focus:outline-none transition-all rich-editor text-lg leading-relaxed text-[#37352F] shadow-inner overflow-y-auto"
+                    style={{ outline: 'none' }}
+                />
+                <style jsx>{`
                     .rich-editor:empty:before {
                         content: attr(data-placeholder);
                         color: #D1D1D1;
@@ -899,7 +900,7 @@ const RichEditor = React.memo(React.forwardRef<HTMLDivElement, { initialContent:
                         border: 1px solid #F5E6D3;
                     }
                 `}</style>
-        </>
+            </>
         );
     }
 ), (prev, next) => {
