@@ -845,7 +845,7 @@ function JournalPageContent() {
             </div>
         </div>
     );
-    );
+
 }
 
 // Separate RichEditor component to prevent re-renders causing cursor jumps

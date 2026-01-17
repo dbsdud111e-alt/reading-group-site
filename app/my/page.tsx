@@ -234,34 +234,34 @@ export default function MyPage() {
                                 </Link>
                             </div>
                         </div>
-                    </div>
+                    )
                 ))}
-        </div>
+            </div>
 
             {
-        activeTab === 'journal' && myJournals.length === 0 && (
-            <div className="py-20 text-center border-2 border-dashed border-[#F1F1F0] rounded-3xl text-[#A1A1A1]">
-                <p>등록된 독서 기록이 없습니다.</p>
-            </div>
-        )
-    }
+                activeTab === 'journal' && myJournals.length === 0 && (
+                    <div className="py-20 text-center border-2 border-dashed border-[#F1F1F0] rounded-3xl text-[#A1A1A1]">
+                        <p>등록된 독서 기록이 없습니다.</p>
+                    </div>
+                )
+            }
 
-    {
-        activeTab === 'materials' && myMaterials.length === 0 && (
-            <div className="py-20 text-center border-2 border-dashed border-[#F1F1F0] rounded-3xl text-[#A1A1A1]">
-                <p>등록된 수업 자료가 없습니다.</p>
-            </div>
-        )
-    }
+            {
+                activeTab === 'materials' && myMaterials.length === 0 && (
+                    <div className="py-20 text-center border-2 border-dashed border-[#F1F1F0] rounded-3xl text-[#A1A1A1]">
+                        <p>등록된 수업 자료가 없습니다.</p>
+                    </div>
+                )
+            }
 
-    {
-        activeTab === 'memo' && myMemos.length === 0 && (
-            <div className="py-20 text-center border-2 border-dashed border-[#F5E6D3] bg-[#FFFCF5]/30 rounded-3xl text-[#A1A1A1]">
-                <p>작성된 메모가 없습니다.</p>
-                <p className="text-sm mt-2">위의 입력창에 간단한 메모를 남겨보세요.</p>
-            </div>
-        )
-    }
+            {
+                activeTab === 'memo' && myMemos.length === 0 && (
+                    <div className="py-20 text-center border-2 border-dashed border-[#F5E6D3] bg-[#FFFCF5]/30 rounded-3xl text-[#A1A1A1]">
+                        <p>작성된 메모가 없습니다.</p>
+                        <p className="text-sm mt-2">위의 입력창에 간단한 메모를 남겨보세요.</p>
+                    </div>
+                )
+            }
         </div >
     );
 }
