@@ -11,9 +11,10 @@ export default function DashboardPage() {
   const { journalPosts, books, schedules, users, currentUser, trackerRecords, toggleTrackerCompletion } = useReading();
   const [showAllStatus, setShowAllStatus] = useState(false);
 
-  // Get most recent posts (all shared posts), excluding private memos
+  // Get most recent posts (all shared posts), excluding private memos and private posts from others
   const recentPosts = [...journalPosts]
     .filter(p => !(p.category === 'memo' && !p.book_id))
+    .filter(p => !p.is_private || (currentUser && p.user_id === currentUser.id))
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 4);
 
