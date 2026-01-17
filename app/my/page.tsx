@@ -349,7 +349,7 @@ export default function MyPage() {
             }
             {viewingMemo && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={handleCloseMemoModal}>
-                    <div className="w-full max-w-2xl bg-[#FFFDF5] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+                    <div className="w-full max-w-3xl bg-[#FFFDF5] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] resize min-h-[500px]" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-between px-6 py-4 border-b border-[#F5E6D3] bg-[#FFFDF5]">
                             <h3 className="font-bold text-lg text-[#37352F] flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-[#FFB84D]"></span>
