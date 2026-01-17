@@ -248,21 +248,11 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
     }, [materialTags, globalFilterTags]);
 
     const updatePoints = async (userId: string, delta: number) => {
-        // Optimistic update
+        // Optimistic update only (DB is updated by Postgres Triggers)
         setUsers(prev => prev.map(u => u.id === userId ? { ...u, points: (u.points || 0) + delta } : u));
 
         if (currentUser?.id === userId) {
             setCurrentUser(prev => prev ? { ...prev, points: (prev.points || 0) + delta } : null);
-        }
-
-        try {
-            const { data: user } = await supabase.from('users').select('points').eq('id', userId).single();
-            if (user) {
-                const newPoints = (user.points || 0) + delta;
-                await supabase.from('users').update({ points: newPoints }).eq('id', userId);
-            }
-        } catch (error) {
-            console.error('Error updating points:', error);
         }
     };
 
