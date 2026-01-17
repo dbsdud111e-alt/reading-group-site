@@ -9,7 +9,15 @@ export interface Comment {
     id: string;
     user_id: string;
     content: string;
+    content: string;
     created_at: string;
+}
+
+export interface TrackerRecord {
+    id: string;
+    user_id: string;
+    schedule_id: string;
+    completed_at: string;
 }
 
 export interface JournalPost {
@@ -40,7 +48,9 @@ interface ReadingContextType {
     books: Partial<Book>[];
     schedules: Schedule[];
     journalPosts: JournalPost[];
+    journalPosts: JournalPost[];
     users: User[];
+    trackerRecords: TrackerRecord[];
     addBook: (book: any) => Promise<Partial<Book> | null>;
     updateBook: (bookId: string, updates: Partial<Book>) => void;
     deleteBook: (bookId: string) => void;
@@ -59,6 +69,8 @@ interface ReadingContextType {
     deleteMaterialTag: (tag: string) => void;
     globalFilterTags: string[];
     setGlobalFilterTags: (tags: string[]) => void;
+    setGlobalFilterTags: (tags: string[]) => void;
+    toggleTrackerCompletion: (scheduleId: string) => Promise<void>;
     // Auth
     currentUser: User | null;
     isLoading: boolean;
@@ -76,6 +88,7 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
     const [schedules, setSchedules] = useState<Schedule[]>([]);
     const [journalPosts, setJournalPosts] = useState<JournalPost[]>([]);
     const [users, setUsers] = useState<User[]>([]);
+    const [trackerRecords, setTrackerRecords] = useState<TrackerRecord[]>([]);
     const [materialTags, setMaterialTags] = useState<string[]>(['공통수학', '미적분', '기하', '활동지', '발표자료', '도구']);
     const [globalFilterTags, setGlobalFilterTags] = useState<string[]>([]);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -92,12 +105,14 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
                 { data: dbBooks },
                 { data: dbSchedules },
                 { data: dbPosts },
-                { data: dbUsers }
+                { data: dbUsers },
+                { data: dbTrackerRecords }
             ] = await Promise.all([
                 supabase.from('books').select('*').order('created_at', { ascending: false }),
                 supabase.from('schedules').select('*'),
                 supabase.from('journals').select('*, comments(*)').order('created_at', { ascending: false }).limit(20),
-                supabase.from('users').select('id, display_name, avatar_url').limit(50)
+                supabase.from('users').select('id, display_name, avatar_url').limit(50),
+                supabase.from('tracker_completions').select('*')
             ]);
 
             if (dbBooks) setBooks(dbBooks);
@@ -121,6 +136,7 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
                     avatar_url: u.avatar_url,
                 })));
             }
+            if (dbTrackerRecords) setTrackerRecords(dbTrackerRecords as any);
         } catch (err) {
             console.error('Initial fetch failed:', err);
         } finally {
@@ -200,6 +216,7 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'books' }, () => loadInitialData())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, () => loadInitialData())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, () => loadInitialData())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'tracker_completions' }, () => loadInitialData())
             .subscribe();
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -517,6 +534,32 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
+    const toggleTrackerCompletion = async (scheduleId: string) => {
+        if (!currentUser) return;
+
+        // Check availability strictly
+        const existingRecord = trackerRecords.find(r => r.user_id === currentUser.id && r.schedule_id === scheduleId);
+
+        if (existingRecord) {
+            // Remove
+            const { error } = await supabase.from('tracker_completions').delete().eq('id', existingRecord.id);
+            if (!error) {
+                setTrackerRecords(prev => prev.filter(r => r.id !== existingRecord.id));
+            }
+        } else {
+            // Add
+            const { data, error } = await supabase.from('tracker_completions').insert([{
+                user_id: currentUser.id,
+                schedule_id: scheduleId,
+                completed_at: new Date().toISOString()
+            }]).select().single();
+
+            if (!error && data) {
+                setTrackerRecords(prev => [...prev, data as any]);
+            }
+        }
+    };
+
     return (
         <ReadingContext.Provider value={{
             books,
@@ -541,6 +584,8 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
             deleteMaterialTag,
             globalFilterTags,
             setGlobalFilterTags,
+            trackerRecords,
+            toggleTrackerCompletion,
             currentUser,
             isLoading,
             signInWithGoogle,

@@ -1,16 +1,17 @@
 "use client";
 
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, X, Edit2, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Edit2, Check, CheckCircle, Circle, Users, BarChart2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useReading } from '@/lib/store';
 import { Schedule } from '@/types';
 
 export default function CalendarPage() {
-    const { schedules, books, updateSchedule } = useReading();
+    const { schedules, books, updateSchedule, trackerRecords, toggleTrackerCompletion, users, currentUser } = useReading();
     const [selectedDate, setSelectedDate] = useState<string | null>(null);
     const [editingSchedule, setEditingSchedule] = useState<string | null>(null);
     const [editText, setEditText] = useState('');
+    const [showAllStatus, setShowAllStatus] = useState(false);
 
     const days = Array.from({ length: 31 }, (_, i) => i + 1);
     const startDay = 3; // Wednesday
@@ -210,6 +211,165 @@ export default function CalendarPage() {
                     </div>
                 </div>
             </div>
-        </div>
-    );
-}
+
+            {/* Reading Tracker Section */}
+            <div className="mt-16 border-t border-[#EBEBEB] pt-12">
+                <div className="flex items-center justify-between mb-8">
+                    <div>
+                        <h2 className="text-2xl font-bold text-[#37352F] flex items-center gap-2">
+                            <CheckCircle className="text-green-500" />
+                            나의 독서 트래커
+                        </h2>
+                        <p className="text-[#787774] mt-1 text-sm">일정별 독서 완료 현황을 체크하세요.</p>
+                    </div>
+                    <button
+                        onClick={() => setShowAllStatus(true)}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#F5F5F0] hover:bg-[#EBEBEB] text-[#37352F] text-xs font-bold rounded-lg transition-colors"
+                    >
+                        <Users size={14} />
+                        전체 독서현황 보기
+                    </button>
+                </div>
+
+                <div className="space-y-8">
+                    {books.map(book => {
+                        const bookSchedules = schedules
+                            .filter(s => s.book_id === book.id)
+                            .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
+
+                        if (bookSchedules.length === 0) return null;
+
+                        return (
+                            <div key={book.id} className="bg-white border border-[#EBEBEB] rounded-2xl overflow-hidden shadow-sm">
+                                <div className="p-4 bg-[#FBFBFA] border-b border-[#EBEBEB] flex items-center gap-3">
+                                    <img src={book.cover_url} alt={book.title} className="w-10 h-14 object-cover rounded border border-[#EBEBEB]" />
+                                    <h3 className="font-bold text-[#37352F]">{book.title}</h3>
+                                </div>
+                                <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {bookSchedules.map(schedule => {
+                                        const isCompleted = trackerRecords.some(r => r.user_id === currentUser?.id && r.schedule_id === schedule.id);
+                                        return (
+                                            <button
+                                                key={schedule.id}
+                                                onClick={() => toggleTrackerCompletion(schedule.id)}
+                                                className={cn(
+                                                    "flex items-center justify-between p-4 rounded-xl border transition-all text-left group",
+                                                    isCompleted
+                                                        ? "bg-[#C1E1C1]/30 border-[#C1E1C1] hover:bg-[#C1E1C1]/50" // Pastel Green
+                                                        : "bg-white border-[#EBEBEB] hover:border-blue-300 hover:shadow-sm"
+                                                )}
+                                            >
+                                                <div className="flex-1 min-w-0 mr-3">
+                                                    <div className="text-xs font-bold text-[#787774] mb-1">
+                                                        {new Date(schedule.end_date).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}까지
+                                                    </div>
+                                                    <div className={cn("font-bold truncate", isCompleted ? "text-green-800" : "text-[#37352F]")}>
+                                                        {schedule.range_text}
+                                                    </div>
+                                                </div>
+                                                <div className={cn(
+                                                    "w-6 h-6 rounded-full flex items-center justify-center border-2 transition-colors",
+                                                    isCompleted
+                                                        ? "bg-[#C1E1C1] border-[#C1E1C1] text-green-700"
+                                                        : "border-[#EBEBEB] group-hover:border-blue-300"
+                                                )}>
+                                                    {isCompleted && <Check size={14} strokeWidth={3} />}
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        );
+                    })}
+                    {schedules.length === 0 && (
+                        <div className="text-center py-12 text-[#A1A1A1] border-2 border-dashed border-[#F1F1F0] rounded-2xl">
+                            등록된 일정이 없습니다.
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* All Status Modal */}
+            {showAllStatus && (
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={() => setShowAllStatus(false)}>
+                    <div className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between px-8 py-6 border-b border-[#EBEBEB]">
+                            <h3 className="text-xl font-bold text-[#37352F] flex items-center gap-2">
+                                <Users className="text-blue-500" />
+                                전체 멤버 독서 현황
+                            </h3>
+                            <button onClick={() => setShowAllStatus(false)} className="p-2 hover:bg-[#F5F5F0] rounded-full">
+                                <X size={20} className="text-[#A1A1A1]" />
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-8 bg-[#F9F9F8]">
+                            <div className="space-y-10">
+                                {books.map(book => {
+                                    const bookSchedules = schedules
+                                        .filter(s => s.book_id === book.id)
+                                        .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
+
+                                    if (bookSchedules.length === 0) return null;
+
+                                    return (
+                                        <div key={book.id}>
+                                            <div className="flex items-center gap-3 mb-4">
+                                                <img src={book.cover_url} alt={book.title} className="w-8 h-12 object-cover rounded shadow-sm" />
+                                                <h4 className="font-bold text-lg text-[#37352F]">{book.title}</h4>
+                                            </div>
+                                            <div className="bg-white border border-[#EBEBEB] rounded-2xl overflow-hidden shadow-sm overflow-x-auto">
+                                                <table className="w-full text-sm text-left">
+                                                    <thead className="bg-[#FBFBFA] border-b border-[#EBEBEB] text-[#787774] font-medium">
+                                                        <tr>
+                                                            <th className="px-6 py-4 w-32 sticky left-0 bg-[#FBFBFA] border-r border-[#EBEBEB]">멤버</th>
+                                                            {bookSchedules.map(s => (
+                                                                <th key={s.id} className="px-4 py-3 min-w-[120px] text-center whitespace-nowrap">
+                                                                    <div>{s.range_text}</div>
+                                                                    <div className="text-[10px] font-normal mt-0.5">
+                                                                        ~ {new Date(s.end_date).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}
+                                                                    </div>
+                                                                </th>
+                                                            ))}
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-[#EBEBEB]">
+                                                        {users.map(user => (
+                                                            <tr key={user.id} className="hover:bg-[#F9F9F8]">
+                                                                <td className="px-6 py-4 font-bold text-[#37352F] sticky left-0 bg-white border-r border-[#EBEBEB] flex items-center gap-2">
+                                                                    {user.avatar_url ? (
+                                                                        <img src={user.avatar_url} alt={user.name} className="w-6 h-6 rounded-full" />
+                                                                    ) : (
+                                                                        <div className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center text-[10px] text-gray-500">
+                                                                            {user.name.charAt(0)}
+                                                                        </div>
+                                                                    )}
+                                                                    <span className="truncate max-w-[80px]">{user.name}</span>
+                                                                </td>
+                                                                {bookSchedules.map(s => {
+                                                                    const completed = trackerRecords.some(r => r.user_id === user.id && r.schedule_id === s.id);
+                                                                    return (
+                                                                        <td key={s.id} className="px-4 py-3 text-center">
+                                                                            {completed ? (
+                                                                                <div className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-100 text-green-600">
+                                                                                    <Check size={14} strokeWidth={3} />
+                                                                                </div>
+                                                                            ) : (
+                                                                                <div className="inline-block w-1.5 h-1.5 rounded-full bg-[#EBEBEB]" />
+                                                                            )}
+                                                                        </td>
+                                                                    );
+                                                                })}
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
