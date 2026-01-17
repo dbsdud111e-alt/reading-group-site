@@ -47,7 +47,6 @@ interface ReadingContextType {
     books: Partial<Book>[];
     schedules: Schedule[];
     journalPosts: JournalPost[];
-    journalPosts: JournalPost[];
     users: User[];
     trackerRecords: TrackerRecord[];
     addBook: (book: any) => Promise<Partial<Book> | null>;
@@ -67,7 +66,6 @@ interface ReadingContextType {
     addMaterialTag: (tag: string) => void;
     deleteMaterialTag: (tag: string) => void;
     globalFilterTags: string[];
-    setGlobalFilterTags: (tags: string[]) => void;
     setGlobalFilterTags: (tags: string[]) => void;
     toggleTrackerCompletion: (scheduleId: string) => Promise<void>;
     // Auth
