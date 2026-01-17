@@ -220,7 +220,7 @@ export default function CalendarPage() {
                             <CheckCircle className="text-green-500" />
                             나의 독서 트래커
                         </h2>
-                        <p className="text-[#787774] mt-1 text-sm">일정별 독서 완료 현황을 체크하세요.</p>
+                        <p className="text-[#787774] mt-1 text-sm">일정을 클릭하여 독서 완료를 체크해보세요.</p>
                     </div>
                     <button
                         onClick={() => setShowAllStatus(true)}
@@ -231,7 +231,7 @@ export default function CalendarPage() {
                     </button>
                 </div>
 
-                <div className="space-y-8">
+                <div className="space-y-6">
                     {books.map(book => {
                         const bookSchedules = schedules
                             .filter(s => s.book_id === book.id)
@@ -240,44 +240,59 @@ export default function CalendarPage() {
                         if (bookSchedules.length === 0) return null;
 
                         return (
-                            <div key={book.id} className="bg-white border border-[#EBEBEB] rounded-2xl overflow-hidden shadow-sm">
-                                <div className="p-4 bg-[#FBFBFA] border-b border-[#EBEBEB] flex items-center gap-3">
-                                    <img src={book.cover_url} alt={book.title} className="w-10 h-14 object-cover rounded border border-[#EBEBEB]" />
-                                    <h3 className="font-bold text-[#37352F]">{book.title}</h3>
+                            <div key={book.id} className="bg-white border border-[#EBEBEB] rounded-2xl p-6 shadow-sm flex flex-col md:flex-row gap-6 items-start md:items-center">
+                                {/* Book Info */}
+                                <div className="flex items-center gap-4 min-w-[200px] md:w-1/4">
+                                    <img src={book.cover_url} alt={book.title} className="w-12 h-16 object-cover rounded shadow-sm border border-[#EBEBEB]" />
+                                    <div>
+                                        <h3 className="font-bold text-[#37352F] line-clamp-2 leading-tight">{book.title}</h3>
+                                        <p className="text-xs text-[#A1A1A1] mt-1">{book.author}</p>
+                                    </div>
                                 </div>
-                                <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {bookSchedules.map(schedule => {
-                                        const isCompleted = trackerRecords.some(r => r.user_id === currentUser?.id && r.schedule_id === schedule.id);
-                                        return (
-                                            <button
-                                                key={schedule.id}
-                                                onClick={() => toggleTrackerCompletion(schedule.id)}
-                                                className={cn(
-                                                    "flex items-center justify-between p-4 rounded-xl border transition-all text-left group",
-                                                    isCompleted
-                                                        ? "bg-[#C1E1C1]/30 border-[#C1E1C1] hover:bg-[#C1E1C1]/50" // Pastel Green
-                                                        : "bg-white border-[#EBEBEB] hover:border-blue-300 hover:shadow-sm"
-                                                )}
-                                            >
-                                                <div className="flex-1 min-w-0 mr-3">
-                                                    <div className="text-xs font-bold text-[#787774] mb-1">
-                                                        {new Date(schedule.end_date).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}까지
+
+                                {/* Horizontal Tracker Strip */}
+                                <div className="flex-1 w-full overflow-x-auto pb-2 md:pb-0">
+                                    <div className="flex items-center gap-3 min-w-max">
+                                        {bookSchedules.map((schedule, idx) => {
+                                            const isCompleted = trackerRecords.some(r => r.user_id === currentUser?.id && r.schedule_id === schedule.id);
+                                            return (
+                                                <button
+                                                    key={schedule.id}
+                                                    onClick={() => toggleTrackerCompletion(schedule.id)}
+                                                    className={cn(
+                                                        "relative group flex flex-col items-center justify-center p-3 rounded-xl border-2 transition-all min-w-[140px] h-[100px]",
+                                                        isCompleted
+                                                            ? "bg-[#D4EDDA] border-[#C3E6CB] shadow-sm scale-105 z-10" // Pastel Green
+                                                            : "bg-white border-[#EBEBEB] hover:border-blue-300 hover:bg-gray-50 text-[#A1A1A1] hover:text-[#37352F]"
+                                                    )}
+                                                >
+                                                    {/* Connector Line (visual) - simplified */}
+                                                    {idx > 0 && (
+                                                        <div className={cn(
+                                                            "absolute left-0 top-1/2 -translate-x-full w-3 h-0.5 pointer-events-none",
+                                                            isCompleted ? "bg-[#C3E6CB]" : "bg-[#EBEBEB]"
+                                                        )} style={{ left: '-6px' }} />
+                                                    )}
+
+                                                    <div className="text-[10px] font-bold mb-1 opacity-70">
+                                                        ~ {new Date(schedule.end_date).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}
                                                     </div>
-                                                    <div className={cn("font-bold truncate", isCompleted ? "text-green-800" : "text-[#37352F]")}>
+                                                    <div className={cn(
+                                                        "text-sm font-bold text-center px-1 break-keep",
+                                                        isCompleted ? "text-[#155724]" : "text-inherit"
+                                                    )}>
                                                         {schedule.range_text}
                                                     </div>
-                                                </div>
-                                                <div className={cn(
-                                                    "w-6 h-6 rounded-full flex items-center justify-center border-2 transition-colors",
-                                                    isCompleted
-                                                        ? "bg-[#C1E1C1] border-[#C1E1C1] text-green-700"
-                                                        : "border-[#EBEBEB] group-hover:border-blue-300"
-                                                )}>
-                                                    {isCompleted && <Check size={14} strokeWidth={3} />}
-                                                </div>
-                                            </button>
-                                        );
-                                    })}
+                                                    <div className={cn(
+                                                        "mt-2 w-5 h-5 rounded-full flex items-center justify-center transition-all",
+                                                        isCompleted ? "bg-[#155724] text-white" : "bg-[#F1F1F0] text-[#D1D1D1]"
+                                                    )}>
+                                                        <Check size={12} strokeWidth={4} />
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                             </div>
                         );
@@ -293,8 +308,8 @@ export default function CalendarPage() {
             {/* All Status Modal */}
             {showAllStatus && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={() => setShowAllStatus(false)}>
-                    <div className="w-full max-w-5xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-between px-8 py-6 border-b border-[#EBEBEB]">
+                    <div className="w-full max-w-6xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between px-8 py-6 border-b border-[#EBEBEB] bg-white z-10">
                             <h3 className="text-xl font-bold text-[#37352F] flex items-center gap-2">
                                 <Users className="text-blue-500" />
                                 전체 멤버 독서 현황
@@ -304,7 +319,7 @@ export default function CalendarPage() {
                             </button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-8 bg-[#F9F9F8]">
-                            <div className="space-y-10">
+                            <div className="space-y-12">
                                 {books.map(book => {
                                     const bookSchedules = schedules
                                         .filter(s => s.book_id === book.id)
@@ -314,56 +329,66 @@ export default function CalendarPage() {
 
                                     return (
                                         <div key={book.id}>
-                                            <div className="flex items-center gap-3 mb-4">
+                                            <div className="flex items-center gap-3 mb-5 pl-2">
                                                 <img src={book.cover_url} alt={book.title} className="w-8 h-12 object-cover rounded shadow-sm" />
-                                                <h4 className="font-bold text-lg text-[#37352F]">{book.title}</h4>
+                                                <h4 className="font-bold text-xl text-[#37352F]">{book.title}</h4>
                                             </div>
-                                            <div className="bg-white border border-[#EBEBEB] rounded-2xl overflow-hidden shadow-sm overflow-x-auto">
-                                                <table className="w-full text-sm text-left">
-                                                    <thead className="bg-[#FBFBFA] border-b border-[#EBEBEB] text-[#787774] font-medium">
-                                                        <tr>
-                                                            <th className="px-6 py-4 w-32 sticky left-0 bg-[#FBFBFA] border-r border-[#EBEBEB]">멤버</th>
-                                                            {bookSchedules.map(s => (
-                                                                <th key={s.id} className="px-4 py-3 min-w-[120px] text-center whitespace-nowrap">
-                                                                    <div>{s.range_text}</div>
-                                                                    <div className="text-[10px] font-normal mt-0.5">
-                                                                        ~ {new Date(s.end_date).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}
-                                                                    </div>
+                                            <div className="bg-white border border-[#EBEBEB] rounded-2xl shadow-sm overflow-hidden">
+                                                <div className="overflow-x-auto">
+                                                    <table className="w-full text-sm text-center border-collapse">
+                                                        <thead>
+                                                            <tr className="bg-[#FBFBFA] border-b border-[#EBEBEB]">
+                                                                <th className="sticky left-0 z-10 bg-[#FBFBFA] p-4 text-left min-w-[120px] font-bold text-[#787774] border-r border-[#EBEBEB]">
+                                                                    멤버
                                                                 </th>
-                                                            ))}
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-[#EBEBEB]">
-                                                        {users.map(user => (
-                                                            <tr key={user.id} className="hover:bg-[#F9F9F8]">
-                                                                <td className="px-6 py-4 font-bold text-[#37352F] sticky left-0 bg-white border-r border-[#EBEBEB] flex items-center gap-2">
-                                                                    {user.avatar_url ? (
-                                                                        <img src={user.avatar_url} alt={user.name} className="w-6 h-6 rounded-full" />
-                                                                    ) : (
-                                                                        <div className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center text-[10px] text-gray-500">
-                                                                            {user.name.charAt(0)}
+                                                                {bookSchedules.map(s => (
+                                                                    <th key={s.id} className="p-3 min-w-[100px] font-medium text-[#787774] border-r border-[#EBEBEB] last:border-r-0">
+                                                                        <div className="text-xs mb-1 bg-white inline-block px-2 py-0.5 rounded border border-[#EBEBEB]">
+                                                                            ~ {new Date(s.end_date).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}
                                                                         </div>
-                                                                    )}
-                                                                    <span className="truncate max-w-[80px]">{user.name}</span>
-                                                                </td>
-                                                                {bookSchedules.map(s => {
-                                                                    const completed = trackerRecords.some(r => r.user_id === user.id && r.schedule_id === s.id);
-                                                                    return (
-                                                                        <td key={s.id} className="px-4 py-3 text-center">
-                                                                            {completed ? (
-                                                                                <div className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-green-100 text-green-600">
-                                                                                    <Check size={14} strokeWidth={3} />
-                                                                                </div>
-                                                                            ) : (
-                                                                                <div className="inline-block w-1.5 h-1.5 rounded-full bg-[#EBEBEB]" />
-                                                                            )}
-                                                                        </td>
-                                                                    );
-                                                                })}
+                                                                        <div className="text-[#37352F] font-bold text-xs">{s.range_text}</div>
+                                                                    </th>
+                                                                ))}
                                                             </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
+                                                        </thead>
+                                                        <tbody>
+                                                            {users
+                                                                .filter(u => u.name !== 'admin' && u.name !== '관리자')
+                                                                .map(user => (
+                                                                    <tr key={user.id} className="border-b border-[#EBEBEB] hover:bg-[#FDFDFD] transition-colors last:border-b-0">
+                                                                        <td className="sticky left-0 z-10 bg-white p-4 text-left font-bold text-[#37352F] border-r border-[#EBEBEB] flex items-center gap-3 shadow-[2px_0_5px_rgba(0,0,0,0.02)]">
+                                                                            {user.avatar_url ? (
+                                                                                <img src={user.avatar_url} alt={user.name} className="w-8 h-8 rounded-full border border-gray-100" />
+                                                                            ) : (
+                                                                                <div className="w-8 h-8 bg-[#F5F5F0] rounded-full flex items-center justify-center text-xs text-[#787774]">
+                                                                                    {user.name.charAt(0)}
+                                                                                </div>
+                                                                            )}
+                                                                            <span className="truncate">{user.name}</span>
+                                                                        </td>
+                                                                        {bookSchedules.map(s => {
+                                                                            const completed = trackerRecords.some(r => r.user_id === user.id && r.schedule_id === s.id);
+                                                                            return (
+                                                                                <td key={s.id} className="p-3 border-r border-[#EBEBEB] last:border-r-0 bg-white">
+                                                                                    <div className="flex justify-center">
+                                                                                        {completed ? (
+                                                                                            <div className="w-10 h-8 rounded-lg bg-[#D4EDDA] text-[#155724] flex items-center justify-center shadow-sm">
+                                                                                                <Check size={16} strokeWidth={3} />
+                                                                                            </div>
+                                                                                        ) : (
+                                                                                            <div className="w-10 h-8 rounded-lg bg-[#F5F5F0] text-[#EBEBEB] flex items-center justify-center">
+                                                                                                <Circle size={10} fill="currentColor" />
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </td>
+                                                                            );
+                                                                        })}
+                                                                    </tr>
+                                                                ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
                                             </div>
                                         </div>
                                     );
