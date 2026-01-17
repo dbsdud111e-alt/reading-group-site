@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Link from 'next/link';
 import { MessageSquare, Lightbulb, BookOpen, Calendar, Clock, User, ChevronRight, CheckCircle, Check } from 'lucide-react';
 import { CategoryCard } from '@/components/dashboard/DashboardCards';
 import { useReading } from '@/lib/store';
