@@ -34,6 +34,7 @@ export interface JournalPost {
     comments?: Comment[];
     created_at: string;
     updated_at: string;
+    is_private?: boolean;
 }
 
 export interface User {

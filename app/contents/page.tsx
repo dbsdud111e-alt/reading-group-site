@@ -21,6 +21,7 @@ export default function ContentsPage() {
     const [content, setContent] = useState('');
     const [selectedBook, setSelectedBook] = useState<string>('none');
     const [materialStatus, setMaterialStatus] = useState<'draft' | 'finished'>('finished');
+    const [isPrivate, setIsPrivate] = useState(false);
     const [materialTags, setMaterialTags] = useState<string[]>([]);
     const [links, setLinks] = useState<string[]>(['']);
     const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
@@ -43,7 +44,9 @@ export default function ContentsPage() {
 
         const matchesTags = globalFilterTags.length === 0 || globalFilterTags.every(tag => m.material_tags?.includes(tag));
 
-        return matchesSearch && matchesStatus && matchesTags;
+        const isVisible = !m.is_private || (currentUser && m.user_id === currentUser.id);
+
+        return matchesSearch && matchesStatus && matchesTags && isVisible;
     }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     const getUserName = (userId: string) => {
@@ -94,6 +97,7 @@ export default function ContentsPage() {
         setContent('');
         setSelectedBook('none');
         setMaterialStatus('finished');
+        setIsPrivate(false);
         setMaterialTags([]);
         setLinks(['']);
         setUploadedFiles([]);
@@ -135,6 +139,7 @@ export default function ContentsPage() {
                 title: title,
                 content: editorHtml,
                 material_status: materialStatus,
+                is_private: isPrivate,
                 material_tags: materialTags,
                 links: validLinks.length > 0 ? validLinks : undefined,
                 files: fileData.length > 0 ? fileData : undefined,
@@ -149,6 +154,7 @@ export default function ContentsPage() {
                 title: title,
                 content: editorHtml,
                 material_status: materialStatus,
+                is_private: isPrivate,
                 material_tags: materialTags,
                 links: validLinks.length > 0 ? validLinks : undefined,
                 files: fileData.length > 0 ? fileData : undefined,
@@ -167,6 +173,7 @@ export default function ContentsPage() {
         setContent(post.content);
         setSelectedBook(post.book_id || 'none');
         setMaterialStatus(post.material_status || 'finished');
+        setIsPrivate(post.is_private || false);
         setMaterialTags(post.material_tags || []);
         setLinks(post.links && post.links.length > 0 ? post.links : ['']);
         setSelectedReferences(post.references || []);
@@ -315,6 +322,19 @@ export default function ContentsPage() {
                                             </button>
                                         ))}
                                     </div>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        id="is-private"
+                                        checked={isPrivate}
+                                        onChange={(e) => setIsPrivate(e.target.checked)}
+                                        className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                    />
+                                    <label htmlFor="is-private" className="text-sm font-bold text-[#37352F] cursor-pointer select-none">
+                                        비공개로 설정 (나만 보기)
+                                    </label>
                                 </div>
 
                                 <div className="flex flex-col gap-2">
