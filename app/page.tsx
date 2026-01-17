@@ -2,13 +2,14 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { MessageSquare, Lightbulb, BookOpen, Calendar, Clock, User, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
+import { MessageSquare, Lightbulb, BookOpen, Calendar, Clock, User, ChevronRight, CheckCircle, Check } from 'lucide-react';
 import { CategoryCard } from '@/components/dashboard/DashboardCards';
 import { useReading } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
 export default function DashboardPage() {
-  const { journalPosts, books, schedules, users, currentUser } = useReading();
+  const { journalPosts, books, schedules, users, currentUser, trackerRecords, toggleTrackerCompletion } = useReading();
 
   // Get most recent posts (all shared posts), excluding private memos
   const recentPosts = [...journalPosts]
@@ -65,6 +66,75 @@ export default function DashboardPage() {
           <p className="text-[#787774]">오늘의 수학 독서와 수업 아이디어를 확인하세요.</p>
         </div>
       </div>
+
+      {/* Reading Tracker for Current Book */}
+      {currentBook && (
+        <div className="mb-12">
+          <div className="flex items-center gap-2 mb-4">
+            <CheckCircle className="text-green-500" size={24} />
+            <h2 className="text-xl font-bold text-[#37352F]">나의 독서 트래커</h2>
+          </div>
+          <div className="bg-white border border-[#EBEBEB] rounded-2xl p-6 shadow-sm overflow-hidden">
+            <div className="flex items-center gap-4 mb-6">
+              <img src={currentBook.cover_url} alt={currentBook.title} className="w-10 h-14 object-cover rounded shadow-sm border border-[#EBEBEB]" />
+              <div>
+                <h3 className="font-bold text-[#37352F]">{currentBook.title}</h3>
+                <p className="text-xs text-[#A1A1A1]">{currentBook.author}</p>
+              </div>
+            </div>
+
+            <div className="w-full overflow-x-auto pb-2">
+              <div className="flex items-center gap-2 min-w-max">
+                {schedules
+                  .filter(s => s.book_id === currentBook.id)
+                  .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+                  .map((schedule, idx) => {
+                    const isCompleted = trackerRecords.some(r => r.user_id === currentUser?.id && r.schedule_id === schedule.id);
+                    return (
+                      <button
+                        key={schedule.id}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleTrackerCompletion(schedule.id);
+                        }}
+                        className={cn(
+                          "relative group flex flex-col items-center justify-center p-2 rounded-lg border-2 transition-all min-w-[100px] h-[80px]",
+                          isCompleted
+                            ? "bg-[#D4EDDA] border-[#C3E6CB] shadow-sm z-10"
+                            : "bg-white border-[#EBEBEB] hover:border-blue-300 hover:bg-gray-50 text-[#A1A1A1] hover:text-[#37352F]"
+                        )}
+                      >
+                        {idx > 0 && (
+                          <div className={cn(
+                            "absolute left-0 top-1/2 -translate-x-full w-2 h-0.5 pointer-events-none",
+                            isCompleted ? "bg-[#C3E6CB]" : "bg-[#EBEBEB]"
+                          )} style={{ left: '-4px' }} />
+                        )}
+
+                        <div className="text-[9px] font-bold mb-0.5 opacity-70">
+                          ~ {new Date(schedule.end_date).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}
+                        </div>
+                        <div className={cn(
+                          "text-xs font-bold text-center px-1 break-keep leading-tight",
+                          isCompleted ? "text-[#155724]" : "text-inherit"
+                        )}>
+                          {schedule.range_text}
+                        </div>
+                        <div className={cn(
+                          "mt-2 w-5 h-5 rounded-full flex items-center justify-center transition-all",
+                          isCompleted ? "bg-[#155724] text-white" : "bg-[#F1F1F0] text-[#D1D1D1]"
+                        )}>
+                          <Check size={12} strokeWidth={4} />
+                        </div>
+                      </button>
+                    );
+                  })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Prominent Schedule Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
