@@ -1,14 +1,15 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { MessageSquare, Lightbulb, BookOpen, Calendar, Clock, User, ChevronRight, CheckCircle, Check } from 'lucide-react';
+import { MessageSquare, Lightbulb, BookOpen, Calendar, Clock, User, ChevronRight, CheckCircle, Check, Users, X } from 'lucide-react';
 import { CategoryCard } from '@/components/dashboard/DashboardCards';
 import { useReading } from '@/lib/store';
 import { cn } from '@/lib/utils';
 
 export default function DashboardPage() {
   const { journalPosts, books, schedules, users, currentUser, trackerRecords, toggleTrackerCompletion } = useReading();
+  const [showAllStatus, setShowAllStatus] = useState(false);
 
   // Get most recent posts (all shared posts), excluding private memos
   const recentPosts = [...journalPosts]
@@ -69,9 +70,18 @@ export default function DashboardPage() {
       {/* Reading Tracker for Current Book */}
       {currentBook && (
         <div className="mb-12">
-          <div className="flex items-center gap-2 mb-4">
-            <CheckCircle className="text-green-500" size={24} />
-            <h2 className="text-xl font-bold text-[#37352F]">나의 독서 트래커</h2>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="text-green-500" size={24} />
+              <h2 className="text-xl font-bold text-[#37352F]">나의 독서 트래커</h2>
+            </div>
+            <button
+              onClick={() => setShowAllStatus(true)}
+              className="flex items-center gap-2 px-3 py-1.5 bg-[#F5F5F0] hover:bg-[#EBEBEB] text-[#37352F] text-xs font-bold rounded-lg transition-colors"
+            >
+              <Users size={14} />
+              전체 독서현황 보기
+            </button>
           </div>
           <div className="bg-white border border-[#EBEBEB] rounded-2xl p-6 shadow-sm overflow-hidden">
             <div className="flex items-center gap-4 mb-6">
@@ -294,6 +304,100 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* All Status Modal */}
+      {showAllStatus && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4" onClick={() => setShowAllStatus(false)}>
+          <div className="w-full max-w-6xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-8 py-6 border-b border-[#EBEBEB] bg-white z-10">
+              <h3 className="text-xl font-bold text-[#37352F] flex items-center gap-2">
+                <Users className="text-blue-500" />
+                전체 멤버 독서 현황
+              </h3>
+              <button onClick={() => setShowAllStatus(false)} className="p-2 hover:bg-[#F5F5F0] rounded-full">
+                <X size={20} className="text-[#A1A1A1]" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-8 bg-[#F9F9F8]">
+              <div className="space-y-12">
+                {books.map(book => {
+                  const bookSchedules = schedules
+                    .filter(s => s.book_id === book.id)
+                    .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime());
+
+                  if (bookSchedules.length === 0) return null;
+
+                  return (
+                    <div key={book.id}>
+                      <div className="flex items-center gap-3 mb-5 pl-2">
+                        <img src={book.cover_url} alt={book.title} className="w-8 h-12 object-cover rounded shadow-sm" />
+                        <h4 className="font-bold text-xl text-[#37352F]">{book.title}</h4>
+                      </div>
+                      <div className="bg-white border border-[#EBEBEB] rounded-2xl shadow-sm overflow-hidden">
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm text-center border-collapse">
+                            <thead>
+                              <tr className="bg-[#FBFBFA] border-b border-[#EBEBEB]">
+                                <th className="sticky left-0 z-10 bg-[#FBFBFA] p-4 text-left min-w-[120px] font-bold text-[#787774] border-r border-[#EBEBEB]">
+                                  멤버
+                                </th>
+                                {bookSchedules.map(s => (
+                                  <th key={s.id} className="p-3 min-w-[100px] font-medium text-[#787774] border-r border-[#EBEBEB] last:border-r-0">
+                                    <div className="text-xs mb-1 bg-white inline-block px-2 py-0.5 rounded border border-[#EBEBEB]">
+                                      ~ {new Date(s.end_date).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}
+                                    </div>
+                                    <div className="text-[#37352F] font-bold text-xs">{s.range_text}</div>
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {users
+                                .filter(u => u.name !== 'admin' && u.name !== '관리자')
+                                .map(user => (
+                                  <tr key={user.id} className="border-b border-[#EBEBEB] hover:bg-[#FDFDFD] transition-colors last:border-b-0">
+                                    <td className="sticky left-0 z-10 bg-white p-4 text-left font-bold text-[#37352F] border-r border-[#EBEBEB] flex items-center gap-3 shadow-[2px_0_5px_rgba(0,0,0,0.02)]">
+                                      {user.avatar_url ? (
+                                        <img src={user.avatar_url} alt={user.name} className="w-8 h-8 rounded-full border border-gray-100" />
+                                      ) : (
+                                        <div className="w-8 h-8 bg-[#F5F5F0] rounded-full flex items-center justify-center text-xs text-[#787774]">
+                                          {user.name.charAt(0)}
+                                        </div>
+                                      )}
+                                      <span className="truncate">{user.name}</span>
+                                    </td>
+                                    {bookSchedules.map(s => {
+                                      const completed = trackerRecords.some(r => r.user_id === user.id && r.schedule_id === s.id);
+                                      return (
+                                        <td key={s.id} className="p-3 border-r border-[#EBEBEB] last:border-r-0 bg-white">
+                                          <div className="flex justify-center">
+                                            {completed ? (
+                                              <div className="w-6 h-6 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
+                                                <Check size={14} strokeWidth={3} />
+                                              </div>
+                                            ) : (
+                                              <div className="w-6 h-6 bg-gray-50 text-gray-200 rounded-full flex items-center justify-center border border-gray-100">
+                                                <div className="w-1.5 h-1.5 bg-gray-200 rounded-full" />
+                                              </div>
+                                            )}
+                                          </div>
+                                        </td>
+                                      );
+                                    })}
+                                  </tr>
+                                ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
