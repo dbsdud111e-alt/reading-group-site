@@ -13,6 +13,7 @@ type Category = 'memo' | 'question' | 'feeling' | 'idea';
 const categories: { id: Category; label: string; icon: any; color: string }[] = [
     { id: 'question', label: '질문', icon: HelpCircle, color: 'text-rose-600' },
     { id: 'idea', label: '수업 아이디어 및 콘텐츠', icon: Lightbulb, color: 'text-amber-600' },
+    { id: 'memo', label: '메모 및 요약정리', icon: List, color: 'text-gray-600' },
     { id: 'feeling', label: '느낀점', icon: Heart, color: 'text-green-600' },
 ];
 
@@ -53,12 +54,13 @@ function JournalPageContent() {
         const matchesCategory = activeCategory === 'all' || p.category === activeCategory;
         const matchesUser = activeUser === 'all' || p.user_id === activeUser;
         const matchesBook = activeBook === 'all' || p.book_id === activeBook;
-        const isNotMemo = p.category !== 'memo';
+        // Exclude only simple memos (memos without a book)
+        const isNotSimpleMemo = !(p.category === 'memo' && !p.book_id);
 
         // Tag filtering
         const matchesTags = globalFilterTags.length === 0 || (p.material_tags && globalFilterTags.every(tag => p.material_tags!.includes(tag)));
 
-        return matchesCategory && matchesUser && matchesBook && matchesTags && isNotMemo;
+        return matchesCategory && matchesUser && matchesBook && matchesTags && isNotSimpleMemo;
     }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

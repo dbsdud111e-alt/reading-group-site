@@ -12,7 +12,7 @@ export default function DashboardPage() {
 
   // Get most recent posts (all shared posts), excluding private memos
   const recentPosts = [...journalPosts]
-    .filter(p => p.category !== 'memo')
+    .filter(p => !(p.category === 'memo' && !p.book_id))
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 4);
 
