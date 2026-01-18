@@ -904,6 +904,7 @@ const RichEditor = React.memo(React.forwardRef<HTMLDivElement, { initialContent:
                         {/* Basic Colors: Default, Red, Orange, Green, Blue */}
                         {[
                             { color: '#37352F', label: '기본' },
+                            { color: '#9B9A97', label: '회색' },
                             { color: '#E03E3E', label: '빨강' },
                             { color: '#D9730D', label: '주황' },
                             { color: '#0F7B6C', label: '초록' },
