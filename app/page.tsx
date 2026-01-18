@@ -22,7 +22,7 @@ export default function DashboardPage() {
   const upcomingSchedules = [...schedules]
     .filter(s => new Date(s.end_date) >= new Date())
     .sort((a, b) => new Date(a.end_date).getTime() - new Date(b.end_date).getTime())
-    .slice(0, 2);
+    .slice(0, 1);
 
   // Get current reading book (most recent)
   const currentBook = books.filter(b => b.status === 'reading')[0] || books[0];
@@ -59,11 +59,11 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="max-w-[1200px] mx-auto px-6 py-10 md:px-12 md:py-16">
+    <div className="max-w-[1200px] mx-auto px-4 py-8 md:px-12 md:py-16">
       {/* Header */}
       <div className="mb-10 flex items-end justify-between">
         <div>
-          <h1 className="text-4xl font-bold text-[#37352F] mb-2">대시보드</h1>
+          <h1 className="text-3xl md:text-4xl font-bold text-[#37352F] mb-2">대시보드</h1>
           <p className="text-[#787774]">오늘의 수학 독서와 수업 아이디어를 확인하세요.</p>
         </div>
       </div>
@@ -147,7 +147,7 @@ export default function DashboardPage() {
       )}
 
       {/* Prominent Schedule Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10">
+      <div className="mb-10">
         {upcomingSchedules.length > 0 ? (
           upcomingSchedules.map((schedule) => (
             <Link
@@ -177,49 +177,89 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Featured Categories */}
+      {/* Action Cards: Book & Record */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-        <CategoryCard
-          title="질문 & 토론"
-          count={journalPosts.filter(p => p.category === 'question' && books.some(b => b.id === p.book_id)).length}
-          icon={MessageSquare}
-          color="bg-rose-500"
-          description="수학적 개념에 대한 깊이 있는 질문과 통찰을 공유합니다."
-          href="/journal"
-          className="md:col-span-1 border-rose-100"
-        />
-        <CategoryCard
-          title="수업 아이디어"
-          count={journalPosts.filter(p => p.category === 'idea' && books.some(b => b.id === p.book_id)).length}
-          icon={Lightbulb}
-          color="bg-amber-500"
-          description="교실에서 바로 활용할 수 있는 창의적인 수학 수업을 설계합니다."
-          href="/journal"
-          className="md:col-span-1 border-amber-100"
-        />
+        {/* Current Book Info */}
+        <Link
+          href={currentBook ? `/books/${currentBook.id}` : '/books'}
+          className="group relative overflow-hidden rounded-2xl border border-[#EBEBEB] bg-white hover:shadow-lg transition-all duration-300 flex flex-col md:flex-row"
+        >
+          {currentBook ? (
+            <>
+              <div className="md:w-1/3 aspect-[4/3] md:aspect-auto relative overflow-hidden">
+                <img
+                  src={currentBook.cover_url}
+                  alt={currentBook.title}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+              </div>
+              <div className="flex-1 p-6 flex flex-col justify-center">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                  <span className="text-xs font-bold text-green-600 uppercase tracking-wider">함께 읽는 책</span>
+                </div>
+                <h3 className="text-xl font-bold text-[#37352F] mb-1 group-hover:text-blue-600 transition-colors">
+                  {currentBook.title}
+                </h3>
+                <p className="text-sm text-[#787774] mb-4">{currentBook.author}</p>
+                <div className="mt-auto flex items-center text-xs font-bold text-blue-600">
+                  책 정보 보기 <ChevronRight size={14} className="ml-1 group-hover:translate-x-1 transition-transform" />
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 p-8 flex flex-col items-center justify-center text-center">
+              <BookOpen size={32} className="text-[#EBEBEB] mb-2" />
+              <p className="font-bold text-[#A1A1A1]">읽고 있는 책이 없습니다</p>
+            </div>
+          )}
+        </Link>
+
+        {/* Record Action */}
+        <Link
+          href={currentBook ? `/journal?bookId=${currentBook.id}` : '/journal'}
+          className="group relative overflow-hidden rounded-2xl border border-[#EBEBEB] bg-white hover:shadow-lg transition-all duration-300 p-6 flex flex-col justify-between min-h-[200px]"
+        >
+          <div className="absolute top-0 right-0 w-32 h-32 bg-amber-50 rounded-bl-[100px] -mr-10 -mt-10 transition-transform group-hover:scale-110" />
+
+          <div className="relative z-10">
+            <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+              <Calendar size={24} />
+            </div>
+            <h3 className="text-xl font-bold text-[#37352F] mb-2">독서 기록하기</h3>
+            <p className="text-sm text-[#787774] leading-relaxed">
+              {currentBook ? `${currentBook.title}을(를) 읽고\n떠오른 생각이나 질문을 기록해보세요.` : '새로운 아이디어나 궁금한 점을 기록해보세요.'}
+            </p>
+          </div>
+
+          <div className="relative z-10 mt-6 flex items-center text-sm font-bold text-amber-600 group-hover:text-amber-700">
+            기록장 열기 <ChevronRight size={16} className="ml-1 group-hover:translate-x-1 transition-transform" />
+          </div>
+        </Link>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+      <div className="space-y-10">
         {/* Recent Updates */}
-        <div className="lg:col-span-2 space-y-8">
+        <div className="space-y-8">
           <div>
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-6 bg-blue-500 rounded-full" />
-                <h2 className="text-xl font-bold text-[#37352F]">최근 업데이트</h2>
+                <h2 className="text-xl font-bold text-[#37352F]">게시판 최근 업데이트</h2>
               </div>
               <Link href="/journal" className="text-sm text-[#787774] hover:text-[#37352F] flex items-center gap-1">
                 전체보기 <ChevronRight size={14} />
               </Link>
             </div>
 
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {recentPosts.length > 0 ? (
                 recentPosts.map((post) => (
                   <Link
                     href="/journal"
                     key={post.id}
-                    className="block p-5 bg-white border border-[#EBEBEB] rounded-2xl hover:border-blue-100 hover:shadow-sm transition-all"
+                    className="block p-5 bg-white border border-[#EBEBEB] rounded-2xl hover:border-blue-100 hover:shadow-sm transition-all h-full flex flex-col"
                   >
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
@@ -240,14 +280,14 @@ export default function DashboardPage() {
                       </span>
                     </div>
                     <h4 className="font-bold text-[#37352F] mb-2">{post.title}</h4>
-                    <p
-                      className="text-sm text-[#787774] line-clamp-2 leading-relaxed"
+                    <div
+                      className="text-sm text-[#787774] line-clamp-2 leading-relaxed flex-1"
                       dangerouslySetInnerHTML={{ __html: post.content.replace(/<[^>]+>/g, '') }}
                     />
                   </Link>
                 ))
               ) : (
-                <div className="py-20 text-center border-2 border-dashed border-[#F1F1F0] rounded-2xl text-[#A1A1A1]">
+                <div className="col-span-full py-20 text-center border-2 border-dashed border-[#F1F1F0] rounded-2xl text-[#A1A1A1]">
                   게시글이 아직 없습니다.
                 </div>
               )}
@@ -255,55 +295,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Sidebar: Current Reading */}
-        <div className="space-y-8">
-          <div>
-            <div className="flex items-center gap-2 mb-6">
-              <div className="w-1.5 h-6 bg-amber-500 rounded-full" />
-              <h2 className="text-xl font-bold text-[#37352F]">함께 읽는 책</h2>
-            </div>
 
-            {currentBook ? (
-              <Link href="/books" className="block relative group overflow-hidden rounded-2xl border border-[#EBEBEB] bg-white hover:shadow-lg transition-all duration-300">
-                <div className="relative aspect-[4/3] overflow-hidden">
-                  <img
-                    src={currentBook.cover_url}
-                    alt={currentBook.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
-                    <span className="text-white text-xs font-bold">책 상세 보기 →</span>
-                  </div>
-                </div>
-                <div className="p-5">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <span className={cn(
-                      "px-2 py-0.5 text-[10px] font-bold rounded-full",
-                      currentBook.status === 'reading' ? "bg-blue-50 text-blue-600" :
-                        currentBook.status === 'completed' ? "bg-green-50 text-green-600" : "bg-gray-50 text-gray-600"
-                    )}>
-                      {currentBook.status === 'reading' ? '읽는 중' :
-                        currentBook.status === 'completed' ? '완독' : '읽고 싶은'}
-                    </span>
-                  </div>
-                  <h4 className="font-bold text-[#37352F] text-lg mb-1">{currentBook.title}</h4>
-                  <p className="text-xs text-[#787774] mb-3">{currentBook.author}</p>
-
-                  <div className="flex flex-wrap gap-1">
-                    {currentBook.tags?.slice(0, 3).map((tag, idx) => (
-                      <span key={idx} className="text-[10px] bg-gray-100 text-[#787774] px-2 py-0.5 rounded">#{tag}</span>
-                    ))}
-                  </div>
-                </div>
-              </Link>
-            ) : (
-              <div className="p-10 border-2 border-dashed border-[#F1F1F0] rounded-2xl text-center text-[#A1A1A1]">
-                <BookOpen size={24} className="mx-auto mb-2 opacity-50" />
-                <p className="text-sm">서재가 비어있습니다.</p>
-              </div>
-            )}
-          </div>
-        </div>
       </div>
 
       {/* All Status Modal */}
