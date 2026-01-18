@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, List, HelpCircle, Heart, Lightbulb, Plus, Edit2, Trash2, X, Check, Image as ImageIcon, User, Link as LinkIcon, FileText, MessageSquare, BookOpen } from 'lucide-react';
+import { ChevronLeft, List, HelpCircle, Heart, Lightbulb, Plus, Edit2, Trash2, X, Check, Image as ImageIcon, User, Link as LinkIcon, FileText, MessageSquare, BookOpen, Bold, Palette, Highlighter } from 'lucide-react';
 import { useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useReading, JournalPost } from '@/lib/store';
@@ -871,17 +871,84 @@ const RichEditor = React.memo(React.forwardRef<HTMLDivElement, { initialContent:
             }
         }, [ref]);
 
-        // Only set initial HTML once when mounted (or when initialContent prop truly changes implies reset)
+        // Only set initial HTML once when mounted
         useEffect(() => {
             if (internalRef.current) {
                 internalRef.current.innerHTML = initialContent;
             }
-            // We intentionally only run this when initialContent changes (which should be stable during edit)
             // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [initialContent]);
 
+        const execCmd = (command: string, value: string | undefined = undefined) => {
+            document.execCommand(command, false, value);
+            internalRef.current?.focus();
+        };
+
         return (
             <>
+                {/* Formatting Toolbar */}
+                <div className="flex flex-wrap items-center gap-2 mb-3 p-2 bg-white border border-[#EBEBEB] rounded-xl shadow-sm sticky top-0 z-10">
+                    <button
+                        onMouseDown={(e) => { e.preventDefault(); execCmd('bold'); }}
+                        className="p-2 hover:bg-gray-100 rounded-lg text-[#37352F] hover:text-black transition-colors"
+                        title="굵게"
+                    >
+                        <Bold size={18} />
+                    </button>
+
+                    <div className="w-px h-6 bg-gray-200 mx-1" />
+
+                    {/* Text Colors */}
+                    <div className="flex items-center gap-1.5 px-2">
+                        <Palette size={16} className="text-gray-400 mr-1" />
+                        {/* Basic Colors: Default, Red, Orange, Green, Blue */}
+                        {[
+                            { color: '#37352F', label: '기본' },
+                            { color: '#E03E3E', label: '빨강' },
+                            { color: '#D9730D', label: '주황' },
+                            { color: '#0F7B6C', label: '초록' },
+                            { color: '#0B6E99', label: '파랑' }
+                        ].map(({ color, label }) => (
+                            <button
+                                key={color}
+                                onMouseDown={(e) => { e.preventDefault(); execCmd('foreColor', color); }}
+                                className="w-5 h-5 rounded-full border border-gray-200 hover:scale-110 hover:border-gray-400 transition-all shadow-sm"
+                                style={{ backgroundColor: color }}
+                                title={`${label} 글자`}
+                            />
+                        ))}
+                    </div>
+
+                    <div className="w-px h-6 bg-gray-200 mx-1" />
+
+                    {/* Highlight Colors */}
+                    <div className="flex items-center gap-1.5 px-2">
+                        <Highlighter size={16} className="text-gray-400 mr-1" />
+                        {/* Pastel Highlights: Yellow, Green, Blue, Pink */}
+                        {[
+                            { color: '#FEF3C7', label: '노랑' },
+                            { color: '#DCFCE7', label: '초록' },
+                            { color: '#DBEAFE', label: '파랑' },
+                            { color: '#FCE7F3', label: '분홍' }
+                        ].map(({ color, label }) => (
+                            <button
+                                key={color}
+                                onMouseDown={(e) => { e.preventDefault(); execCmd('hiliteColor', color); }}
+                                className="w-5 h-5 rounded-full border border-gray-200 hover:scale-110 hover:border-gray-400 transition-all shadow-sm"
+                                style={{ backgroundColor: color }}
+                                title={`${label} 형광펜`}
+                            />
+                        ))}
+                        <button
+                            onMouseDown={(e) => { e.preventDefault(); execCmd('hiliteColor', 'transparent'); }}
+                            className="p-1 hover:bg-gray-100 rounded text-xs text-gray-400 font-medium"
+                            title="형광펜 지우기"
+                        >
+                            <X size={14} />
+                        </button>
+                    </div>
+                </div>
+
                 <div
                     ref={internalRef}
                     contentEditable
