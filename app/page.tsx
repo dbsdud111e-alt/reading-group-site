@@ -218,7 +218,7 @@ export default function DashboardPage() {
 
         {/* Record Action */}
         <Link
-          href={currentBook ? `/journal?bookId=${currentBook.id}` : '/journal'}
+          href={currentBook ? `/journal?bookId=${currentBook.id}&filter=me` : '/journal?filter=me'}
           className="group relative overflow-hidden rounded-2xl border border-[#EBEBEB] bg-white hover:shadow-lg transition-all duration-300 p-6 flex flex-col justify-between min-h-[200px]"
         >
           <div className="absolute top-0 right-0 w-32 h-32 bg-amber-50 rounded-bl-[100px] -mr-10 -mt-10 transition-transform group-hover:scale-110" />

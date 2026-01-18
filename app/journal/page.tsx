@@ -22,6 +22,7 @@ function JournalPageContent() {
 
     const searchParams = useSearchParams();
     const initialBookId = searchParams?.get('bookId');
+    const initialFilter = searchParams?.get('filter');
 
     const [activeUser, setActiveUser] = useState<string>('all');
     const [activeBook, setActiveBook] = useState<string>(initialBookId || 'all');
@@ -35,6 +36,12 @@ function JournalPageContent() {
     useEffect(() => {
         setActiveBook(initialBookId || 'all');
     }, [initialBookId]);
+
+    useEffect(() => {
+        if (initialFilter === 'me' && currentUser) {
+            setActiveUser(currentUser.id);
+        }
+    }, [initialFilter, currentUser]);
 
     // Form states
     const [content, setContent] = useState('');
