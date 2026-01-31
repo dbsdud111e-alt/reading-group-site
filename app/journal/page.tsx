@@ -24,11 +24,7 @@ function JournalPageContent() {
     const initialBookId = searchParams?.get('bookId');
     const initialFilter = searchParams?.get('filter');
 
-    const [activeBook, setActiveBook] = useState<string>('all');
-    const [activeCategory, setActiveCategory] = useState<Category | 'all'>('all');
-    const [isWriting, setIsWriting] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [content, setContent] = useState('');
 
     const [activeUser, setActiveUser] = useState<string>('all');
     const [activeBook, setActiveBook] = useState<string>(initialBookId || 'all');
