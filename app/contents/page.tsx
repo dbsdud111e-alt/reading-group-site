@@ -802,14 +802,16 @@ export default function ContentsPage() {
                                             <span className="text-[11px] font-bold text-blue-600 truncate">자유 주제</span>
                                         )}
                                     </div>
-                                    <div className="flex items-center gap-1">
-                                        <button onClick={() => handleEdit(m)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="수정">
-                                            <Edit2 size={14} />
-                                        </button>
-                                        <button onClick={() => handleDelete(m.id)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors" title="삭제">
-                                            <Trash2 size={14} />
-                                        </button>
-                                    </div>
+                                    {currentUser?.id === m.user_id && (
+                                        <div className="flex items-center gap-1">
+                                            <button onClick={() => handleEdit(m)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors" title="수정">
+                                                <Edit2 size={14} />
+                                            </button>
+                                            <button onClick={() => handleDelete(m.id)} className="p-1.5 text-rose-600 hover:bg-rose-50 rounded transition-colors" title="삭제">
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <h3
