@@ -156,8 +156,9 @@ function JournalPageContent() {
         }
         // If editing, merge with existing files if logic supported, but for now simple overwrite or add
         // To be safe, let's assume we append new uploads
-        const finalFileData = editingPost
-            ? [...(editingPost.files || []), ...uploadedFileResults]
+        const postToEdit = editingPost ? journalPosts.find(p => p.id === editingPost) : null;
+        const finalFileData = postToEdit
+            ? [...(postToEdit.files || []), ...uploadedFileResults]
             : uploadedFileResults;
 
         // Filter out empty links
