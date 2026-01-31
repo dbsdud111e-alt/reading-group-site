@@ -18,11 +18,17 @@ const categories: { id: Category; label: string; icon: any; color: string }[] = 
 ];
 
 function JournalPageContent() {
-    const { users, journalPosts, books, addJournalPost, updateJournalPost, deleteJournalPost, updateUserName, addComment, deleteComment, materialTags, addMaterialTag, deleteMaterialTag, globalFilterTags, setGlobalFilterTags, currentUser } = useReading();
+    const { users, journalPosts, books, addJournalPost, updateJournalPost, deleteJournalPost, updateUserName, addComment, deleteComment, materialTags, addMaterialTag, deleteMaterialTag, globalFilterTags, setGlobalFilterTags, currentUser, uploadFile } = useReading();
 
     const searchParams = useSearchParams();
     const initialBookId = searchParams?.get('bookId');
     const initialFilter = searchParams?.get('filter');
+
+    const [activeBook, setActiveBook] = useState<string>('all');
+    const [activeCategory, setActiveCategory] = useState<Category | 'all'>('all');
+    const [isWriting, setIsWriting] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [content, setContent] = useState('');
 
     const [activeUser, setActiveUser] = useState<string>('all');
     const [activeBook, setActiveBook] = useState<string>(initialBookId || 'all');
@@ -139,10 +145,24 @@ function JournalPageContent() {
         const extractedContent = editorHtml; // Save full HTML to preserve images
 
         // Process files
-        const fileData = uploadedFiles.map(file => ({
-            url: URL.createObjectURL(file),
-            name: file.name
-        }));
+        if (isSubmitting) return;
+
+        // Process files - Upload to Storage
+        setIsSubmitting(true);
+        const uploadedFileResults = [];
+        if (uploadedFiles.length > 0 && uploadFile) {
+            for (const file of uploadedFiles) {
+                const result = await uploadFile(file);
+                if (result) {
+                    uploadedFileResults.push(result);
+                }
+            }
+        }
+        // If editing, merge with existing files if logic supported, but for now simple overwrite or add
+        // To be safe, let's assume we append new uploads
+        const finalFileData = editingPost
+            ? [...(editingPost.files || []), ...uploadedFileResults]
+            : uploadedFileResults;
 
         // Filter out empty links
         const validLinks = links.filter(link => link.trim() !== '');
@@ -152,7 +172,7 @@ function JournalPageContent() {
                 title: extractedTitle,
                 content: extractedContent,
                 links: validLinks.length > 0 ? validLinks : undefined,
-                files: fileData.length > 0 ? fileData : undefined,
+                files: finalFileData.length > 0 ? finalFileData : undefined,
                 material_status: activeCategory === 'idea' ? materialStatus : undefined,
                 material_tags: activeCategory === 'idea' ? formMaterialTags : undefined,
             });
@@ -165,8 +185,8 @@ function JournalPageContent() {
                 category: activeCategory === 'all' ? 'memo' : activeCategory,
                 title: extractedTitle,
                 content: extractedContent,
+                files: uploadedFileResults.length > 0 ? uploadedFileResults : undefined,
                 links: validLinks.length > 0 ? validLinks : undefined,
-                files: fileData.length > 0 ? fileData : undefined,
                 material_status: activeCategory === 'idea' ? materialStatus : undefined,
                 material_tags: activeCategory === 'idea' ? formMaterialTags : undefined,
                 created_at: new Date().toISOString(),
@@ -181,6 +201,7 @@ function JournalPageContent() {
         setMaterialStatus('draft');
         setFormMaterialTags([]);
         setUploadedFiles([]);
+        setIsSubmitting(false);
         setUploadedImages([]);
         setIsWriting(false);
         setEditingPost(null);
@@ -831,11 +852,11 @@ function JournalPageContent() {
                                             취소
                                         </button>
                                         <button
-                                            onClick={handleSubmit}
-                                            className="flex-[2] py-4 bg-[#37352F] text-white rounded-2xl text-sm font-bold hover:bg-black transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2"
+                                            disabled={isSubmitting}
+                                            className="flex-[2] py-4 bg-[#37352F] text-white rounded-2xl text-sm font-bold hover:bg-black transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50"
                                         >
                                             <Check size={18} />
-                                            완료하기
+                                            {isSubmitting ? '업로드 중...' : '완료하기'}
                                         </button>
                                     </div>
                                 </div>

@@ -14,7 +14,7 @@ export default function CalendarPage() {
     const [showAllStatus, setShowAllStatus] = useState(false);
 
     const days = Array.from({ length: 31 }, (_, i) => i + 1);
-    const startDay = 3; // Wednesday
+    const startDay = 4; // 2026-01-01 is Thursday
 
     const getSchedulesForDate = (day: number) => {
         const dateStr = `2026-01-${String(day).padStart(2, '0')}`;

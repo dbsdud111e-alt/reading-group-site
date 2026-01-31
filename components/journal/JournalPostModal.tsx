@@ -132,7 +132,7 @@ export function JournalPostModal({ post, onClose }: JournalPostModalProps) {
                                         <span className="text-xs font-black text-[#37352F]">{getUserName(comment.user_id)}</span>
                                         <div className="flex items-center gap-3">
                                             <span className="text-[10px] font-bold text-[#A1A1A1]">{new Date(comment.created_at).toLocaleDateString('ko-KR')}</span>
-                                            {(currentUser?.id === comment.user_id || currentUser?.id === post.user_id) && (
+                                            {(currentUser?.id === comment.user_id) && (
                                                 <button onClick={() => deleteComment(post.id, comment.id)} className="text-[#A1A1A1] hover:text-rose-500 transition-colors">
                                                     <X size={14} />
                                                 </button>

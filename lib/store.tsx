@@ -42,7 +42,6 @@ export interface User {
     name: string;
     avatar_url?: string;
     email?: string;
-    points?: number;
 }
 
 interface ReadingContextType {
@@ -58,6 +57,7 @@ interface ReadingContextType {
     updateSchedule: (id: string, updates: Partial<Schedule>) => void;
     deleteSchedule: (id: string) => void;
     addJournalPost: (post: JournalPost) => void;
+    uploadFile: (file: File) => Promise<{ url: string; name: string } | null>;
     updateJournalPost: (id: string, updates: Partial<JournalPost>) => void;
     deleteJournalPost: (id: string) => void;
     addComment: (postId: string, comment: Comment) => void;
@@ -133,7 +133,6 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
                     id: u.id,
                     name: u.display_name || '익명',
                     avatar_url: u.avatar_url,
-                    points: u.points || 0
                 })));
             }
             if (dbTrackerRecords) setTrackerRecords(dbTrackerRecords as any);
@@ -165,7 +164,6 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
                     ...prev,
                     name: data.display_name || prev.name,
                     avatar_url: data.avatar_url || prev.avatar_url,
-                    points: data.points || 0
                 } : null);
             } else {
                 // Create profile if missing
@@ -174,7 +172,6 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
                     display_name: initialUser.name,
                     avatar_url: initialUser.avatar_url,
                     role: 'teacher',
-                    points: 0
                 }]);
                 await loadInitialData();
             }
@@ -247,14 +244,7 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('math-global-filter-tags', JSON.stringify(globalFilterTags));
     }, [materialTags, globalFilterTags]);
 
-    const updatePoints = async (userId: string, delta: number) => {
-        // Optimistic update only (DB is updated by Postgres Triggers)
-        setUsers(prev => prev.map(u => u.id === userId ? { ...u, points: (u.points || 0) + delta } : u));
 
-        if (currentUser?.id === userId) {
-            setCurrentUser(prev => prev ? { ...prev, points: (prev.points || 0) + delta } : null);
-        }
-    };
 
     const addBook = async (newBook: any) => {
         if (!currentUser) {
@@ -359,6 +349,41 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
+    const uploadFile = async (file: File) => {
+        if (!currentUser) return null;
+
+        try {
+            // 1. Create a unique file path
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+            const filePath = `${currentUser.id}/${fileName}`;
+
+            // 2. Upload to Supabase Storage
+            const { error: uploadError } = await supabase.storage
+                .from('uploads')
+                .upload(filePath, file);
+
+            if (uploadError) {
+                console.error('Upload error:', uploadError);
+                throw uploadError;
+            }
+
+            // 3. Get Public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('uploads')
+                .getPublicUrl(filePath);
+
+            return {
+                url: publicUrl,
+                name: file.name
+            };
+        } catch (error) {
+            console.error('File upload failed:', error);
+            alert('파일 업로드 실패: ' + (error as any).message);
+            return null;
+        }
+    };
+
     const addJournalPost = async (post: JournalPost) => {
         if (!currentUser) {
             alert('로그인이 필요합니다.');
@@ -379,8 +404,7 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
 
         if (!error && data) {
             setJournalPosts(prev => [data as any, ...prev]);
-            // Add 1 point for creating a post (journal, idea, lesson content)
-            updatePoints(currentUser.id, 1);
+
         } else if (error) {
             console.error('Error adding post:', error.message);
             alert('게시글 저장 실패: ' + error.message);
@@ -401,10 +425,7 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
         if (!error) {
             setJournalPosts(prev => prev.filter(p => p.id !== id));
 
-            // Deduct 1 point when a post is deleted
-            if (postToDelete) {
-                updatePoints(postToDelete.user_id, -1);
-            }
+
         }
     };
 
@@ -573,8 +594,7 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
                 setTrackerRecords(prev => [...prev, existingRecord]);
                 alert("삭제에 실패했습니다. 다시 시도해주세요.");
             } else {
-                // Determine if we should decrease points (removed completion)
-                updatePoints(currentUser.id, -1);
+
             }
         } else {
             // Optimistic Add
@@ -601,8 +621,7 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
             } else if (data) {
                 // Update temp ID to real ID
                 setTrackerRecords(prev => prev.map(r => r.id === tempId ? (data as any) : r));
-                // Add 1 point for completion
-                updatePoints(currentUser.id, 1);
+
             }
         }
     };
@@ -620,6 +639,7 @@ export function ReadingProvider({ children }: { children: React.ReactNode }) {
             updateSchedule,
             deleteSchedule,
             addJournalPost,
+            uploadFile,
             updateJournalPost,
             deleteJournalPost,
             addComment,

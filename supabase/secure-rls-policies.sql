@@ -148,4 +148,4 @@ TO authenticated
 USING (
   auth.uid() = id  -- 자신의 계정은 삭제 가능
   -- OR auth.uid() = 'ADMIN_USER_ID_HERE'::uuid  -- 관리자 ID로 교체하세요
-);
+);다른사
