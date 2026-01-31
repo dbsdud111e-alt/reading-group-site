@@ -818,7 +818,7 @@ function JournalPageContent() {
                                                     <div>
                                                         <h4 className="text-xs font-black text-[#787774] uppercase tracking-widest mb-4">첨부 파일</h4>
                                                         <div className="p-8 border-2 border-dashed border-[#F5E6D3] rounded-[24px] bg-[#FFFCF5] hover:bg-[#FFF9E6] hover:border-[#FFD97D] transition-all cursor-pointer relative group text-center">
-                                                            <input type="file" multiple accept="image/*" onChange={handleFileSelect} className="absolute inset-0 opacity-0 cursor-pointer" />
+                                                            <input type="file" multiple onChange={handleFileSelect} className="absolute inset-0 opacity-0 cursor-pointer" />
                                                             <div className="text-[#FFB84D] mb-2 flex justify-center"><ImageIcon size={32} /></div>
                                                             <p className="text-xs font-bold text-[#787774]">클릭하여 파일을 업로드하세요</p>
                                                             <p className="text-[10px] text-[#A1A1A1] mt-1">이미지, 문서 등</p>
@@ -849,6 +849,7 @@ function JournalPageContent() {
                                             취소
                                         </button>
                                         <button
+                                            onClick={handleSubmit}
                                             disabled={isSubmitting}
                                             className="flex-[2] py-4 bg-[#37352F] text-white rounded-2xl text-sm font-bold hover:bg-black transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-50"
                                         >
